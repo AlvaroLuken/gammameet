@@ -6,7 +6,7 @@ export default async function Home() {
   if (session) redirect("/dashboard");
 
   return (
-    <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center px-6">
+    <main className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white transition-colors flex flex-col items-center justify-center px-6">
       <div className="max-w-2xl text-center space-y-8">
         <div className="space-y-4">
           <h1 className="text-6xl font-bold tracking-tight">

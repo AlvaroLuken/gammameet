@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface Meeting {
   id: string;
@@ -9,7 +11,9 @@ interface Meeting {
   start_time: string;
   end_time: string;
   gamma_url: string | null;
-  meet_link: string | null;
+  export_url: string | null;
+  preview_image: string | null;
+  meeting_invites?: { email: string }[];
 }
 
 function formatDate(iso: string) {
@@ -28,6 +32,10 @@ function formatTime(iso: string) {
   });
 }
 
+function durationMins(start: string, end: string) {
+  return Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000);
+}
+
 export default function Dashboard() {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,44 +50,43 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <header className="border-b border-zinc-800 px-8 py-5 flex items-center justify-between">
+    <div className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white transition-colors">
+      <header className="border-b border-zinc-200 dark:border-zinc-800 px-8 py-5 flex items-center justify-between">
         <h1 className="text-2xl font-bold">
-          Gamma<span className="text-violet-400">Meet</span>
+          Gamma<span className="text-violet-500">Meet</span>
         </h1>
-        <form action="/api/auth/signout" method="POST">
-          <button className="text-zinc-500 hover:text-white text-sm transition-colors">
-            Sign out
-          </button>
-        </form>
+        <div className="flex items-center gap-4">
+          <ThemeToggle />
+          <form action="/api/auth/signout" method="POST">
+            <button className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-sm transition-colors">
+              Sign out
+            </button>
+          </form>
+        </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-8 py-12 space-y-12">
+      <main className="max-w-5xl mx-auto px-8 py-12 space-y-8">
         {loading ? (
-          <div className="text-zinc-500 text-center py-20">Loading your recaps...</div>
+          <div className="text-zinc-400 text-center py-20">Loading your recaps...</div>
+        ) : meetings.length === 0 ? (
+          <div className="text-center py-20 space-y-3">
+            <p className="text-zinc-500 text-lg">No recaps yet.</p>
+            <p className="text-zinc-400 text-sm">
+              Add <span className="font-mono bg-zinc-100 dark:bg-zinc-900 px-2 py-0.5 rounded">fred@fireflies.ai</span> to a meeting to get your first recap.
+            </p>
+          </div>
         ) : (
           <>
-            {meetings.length > 0 && (
-              <section className="space-y-4">
-                <h2 className="text-zinc-400 text-sm font-semibold uppercase tracking-widest">
-                  Meeting Recaps ({meetings.length})
-                </h2>
-                <div className="space-y-3">
-                  {meetings.map((m) => (
-                    <MeetingCard key={m.id} meeting={m} />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {meetings.length === 0 && (
-              <div className="text-center py-20 space-y-3">
-                <p className="text-zinc-400 text-lg">No recaps yet.</p>
-                <p className="text-zinc-600 text-sm">
-                  Add fred@fireflies.ai to a meeting to get your first recap.
-                </p>
-              </div>
-            )}
+            <div className="flex items-center justify-between">
+              <h2 className="text-zinc-500 dark:text-zinc-400 text-sm font-semibold uppercase tracking-widest">
+                {meetings.length} Recap{meetings.length !== 1 ? "s" : ""}
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {meetings.map((m) => (
+                <MeetingCard key={m.id} meeting={m} />
+              ))}
+            </div>
           </>
         )}
       </main>
@@ -88,26 +95,46 @@ export default function Dashboard() {
 }
 
 function MeetingCard({ meeting }: { meeting: Meeting }) {
+  const duration = meeting.end_time ? durationMins(meeting.start_time, meeting.end_time) : null;
+
   return (
-    <div className="flex items-center justify-between bg-zinc-900 border border-zinc-800 rounded-xl px-6 py-4 hover:border-zinc-700 transition-colors">
-      <div className="space-y-1">
-        <p className="font-medium text-white">{meeting.title}</p>
-        <p className="text-zinc-500 text-sm">
-          {formatDate(meeting.start_time)} · {formatTime(meeting.start_time)} – {formatTime(meeting.end_time)}
-        </p>
-      </div>
-      <div className="flex items-center gap-3">
-        {meeting.gamma_url ? (
-          <Link
-            href={`/meetings/${meeting.id}`}
-            className="bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
-          >
-            View Recap →
-          </Link>
+    <Link
+      href={`/meetings/${meeting.id}`}
+      className="group flex flex-col bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden hover:border-violet-400 dark:hover:border-violet-600 hover:shadow-lg transition-all"
+    >
+      {/* Preview image */}
+      <div className="relative w-full aspect-video bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+        {meeting.preview_image ? (
+          <Image
+            src={meeting.preview_image}
+            alt={meeting.title}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
+          />
         ) : (
-          <span className="text-zinc-600 text-sm">No recap yet</span>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-4xl opacity-20">✦</span>
+          </div>
+        )}
+        {duration && (
+          <span className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full">
+            {duration}m
+          </span>
         )}
       </div>
-    </div>
+
+      {/* Card body */}
+      <div className="flex flex-col gap-2 p-4">
+        <p className="font-semibold text-zinc-900 dark:text-white leading-snug line-clamp-2">
+          {meeting.title}
+        </p>
+        <p className="text-zinc-500 dark:text-zinc-400 text-xs">
+          {formatDate(meeting.start_time)} · {formatTime(meeting.start_time)}
+        </p>
+        <span className="mt-1 inline-flex items-center gap-1 text-violet-600 dark:text-violet-400 text-xs font-semibold">
+          View Recap →
+        </span>
+      </div>
+    </Link>
   );
 }

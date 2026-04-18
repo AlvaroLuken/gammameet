@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default async function MeetingPage({
   params,
@@ -26,14 +27,17 @@ export default async function MeetingPage({
   ) ?? [];
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <header className="border-b border-zinc-800 px-8 py-5 flex items-center gap-4">
-        <Link href="/dashboard" className="text-zinc-500 hover:text-white transition-colors text-sm">
-          ← Back
-        </Link>
-        <h1 className="text-2xl font-bold">
-          Gamma<span className="text-violet-400">Meet</span>
-        </h1>
+    <div className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white transition-colors">
+      <header className="border-b border-zinc-200 dark:border-zinc-800 px-8 py-5 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link href="/dashboard" className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors text-sm">
+            ← Back
+          </Link>
+          <h1 className="text-2xl font-bold">
+            Gamma<span className="text-violet-500">Meet</span>
+          </h1>
+        </div>
+        <ThemeToggle />
       </header>
 
       <main className="max-w-5xl mx-auto px-8 py-12 space-y-8">

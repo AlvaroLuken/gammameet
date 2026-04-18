@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
 export async function processTranscript(transcriptId: string) {
   const transcript = await fetchTranscript(transcriptId);
   const content = buildPromptFromTranscript(transcript);
-  const { gammaUrl, exportUrl } = await generateGammaPage(transcript.title, content);
+  const { gammaUrl, exportUrl, previewImage } = await generateGammaPage(transcript.title, content);
 
   const meetingDate = new Date(transcript.date);
   const dayStart = new Date(meetingDate);
@@ -61,7 +61,7 @@ export async function processTranscript(transcriptId: string) {
   if (existing) {
     await supabase
       .from("meetings")
-      .update({ gamma_url: gammaUrl, export_url: exportUrl, fireflies_id: transcriptId })
+      .update({ gamma_url: gammaUrl, export_url: exportUrl, preview_image: previewImage, fireflies_id: transcriptId })
       .eq("id", existing.id);
   } else {
     const { data: meeting } = await supabase
@@ -72,6 +72,7 @@ export async function processTranscript(transcriptId: string) {
         fireflies_id: transcriptId,
         gamma_url: gammaUrl,
         export_url: exportUrl,
+        preview_image: previewImage,
       })
       .select()
       .single();
