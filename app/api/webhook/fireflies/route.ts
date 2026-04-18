@@ -8,7 +8,9 @@ function verifySignature(body: string, signature: string): boolean {
   const secret = process.env.FIREFLIES_WEBHOOK_SECRET;
   if (!secret) return true;
   const expected = crypto.createHmac("sha256", secret).update(body).digest("hex");
-  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+  const a = Buffer.from(expected);
+  const b = Buffer.from(signature.length === expected.length ? signature : expected);
+  return crypto.timingSafeEqual(a, b) && signature === expected;
 }
 
 export async function POST(req: NextRequest) {
