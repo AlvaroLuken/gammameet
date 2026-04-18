@@ -1,6 +1,6 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
-import { SupabaseAdapter } from "@auth/supabase-adapter";
+import { supabase } from "./supabase";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -21,13 +21,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
-  adapter: SupabaseAdapter({
-    url: process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    secret: process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  }),
+  session: { strategy: "jwt" },
   callbacks: {
-    async session({ session, user }) {
-      session.user.id = user.id;
+    async jwt({ token, account }) {
+      if (account) {
+        token.accessToken = account.access_token;
+        token.refreshToken = account.refresh_token;
+
+        // Upsert user into Supabase
+        await supabase.from("users").upsert(
+          { email: token.email, name: token.name, image: token.picture },
+          { onConflict: "email" }
+        );
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      session.user.accessToken = token.accessToken as string;
+      session.user.refreshToken = token.refreshToken as string;
       return session;
     },
   },

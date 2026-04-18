@@ -5,14 +5,18 @@ import { supabase } from "@/lib/supabase";
 
 export async function GET() {
   const session = await auth();
-  if (!session?.user?.id) {
+  if (!session?.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Fetch calendar meetings
-  const calendarMeetings = await getUserMeetings(session.user.id);
+  const accessToken = session.user.accessToken;
+  if (!accessToken) {
+    return NextResponse.json({ error: "No access token" }, { status: 401 });
+  }
 
-  // Upsert calendar meetings into DB
+  // Sync calendar meetings into DB
+  const calendarMeetings = await getUserMeetings(accessToken);
+
   for (const m of calendarMeetings) {
     const { data: existing } = await supabase
       .from("meetings")
@@ -41,14 +45,14 @@ export async function GET() {
     }
   }
 
-  // Fetch meetings this user is invited to
-  const userEmail = session.user.email!;
-  const { data: invitedMeetingIds } = await supabase
+  // Return meetings this user is invited to
+  const { data: invites } = await supabase
     .from("meeting_invites")
     .select("meeting_id")
-    .eq("email", userEmail);
+    .eq("email", session.user.email);
 
-  const ids = (invitedMeetingIds ?? []).map((r) => r.meeting_id);
+  const ids = (invites ?? []).map((r) => r.meeting_id);
+  if (ids.length === 0) return NextResponse.json([]);
 
   const { data: meetings } = await supabase
     .from("meetings")

@@ -1,43 +1,22 @@
--- Required by NextAuth SupabaseAdapter
+-- Run this in Supabase SQL Editor
+-- Drop old adapter tables if you ran the previous schema
+drop table if exists verification_tokens;
+drop table if exists sessions;
+drop table if exists accounts;
+drop table if exists users cascade;
+drop table if exists meeting_invites;
+drop table if exists meetings;
+
+-- Users (simple, JWT-based auth)
 create table users (
   id uuid primary key default gen_random_uuid(),
+  email text unique not null,
   name text,
-  email text unique,
-  "emailVerified" timestamptz,
-  image text
+  image text,
+  created_at timestamptz default now()
 );
 
-create table accounts (
-  id uuid primary key default gen_random_uuid(),
-  "userId" uuid references users(id) on delete cascade,
-  type text,
-  provider text,
-  "providerAccountId" text,
-  refresh_token text,
-  access_token text,
-  expires_at bigint,
-  token_type text,
-  scope text,
-  id_token text,
-  session_state text,
-  unique(provider, "providerAccountId")
-);
-
-create table sessions (
-  id uuid primary key default gen_random_uuid(),
-  "sessionToken" text unique,
-  "userId" uuid references users(id) on delete cascade,
-  expires timestamptz
-);
-
-create table verification_tokens (
-  identifier text,
-  token text unique,
-  expires timestamptz,
-  primary key (identifier, token)
-);
-
--- GammaMeet tables
+-- Meetings synced from Google Calendar
 create table meetings (
   id uuid primary key default gen_random_uuid(),
   calendar_event_id text unique,
@@ -50,6 +29,7 @@ create table meetings (
   created_at timestamptz default now()
 );
 
+-- Who was invited to each meeting
 create table meeting_invites (
   id uuid primary key default gen_random_uuid(),
   meeting_id uuid references meetings(id) on delete cascade,
@@ -60,3 +40,8 @@ create table meeting_invites (
 -- Indexes
 create index on meeting_invites(email);
 create index on meetings(start_time desc);
+
+-- Disable RLS so service role can read/write freely
+alter table users disable row level security;
+alter table meetings disable row level security;
+alter table meeting_invites disable row level security;
