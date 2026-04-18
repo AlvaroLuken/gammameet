@@ -30,7 +30,8 @@ export async function POST(req: NextRequest) {
 
   const transcriptId = payload.transcriptId ?? payload.meetingId;
   if (!transcriptId) {
-    return NextResponse.json({ error: "Missing transcriptId" }, { status: 400 });
+    // Fireflies test ping — no transcript yet, just acknowledge
+    return NextResponse.json({ received: true, test: true });
   }
 
   processTranscript(transcriptId).catch((err) =>
