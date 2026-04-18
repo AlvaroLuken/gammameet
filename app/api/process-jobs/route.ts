@@ -49,11 +49,13 @@ async function processTranscript(transcriptId: string) {
 
   let meetingId: string;
 
+  const startTime = new Date(Number(transcript.date)).toISOString();
+
   const { data: meeting, error } = await supabase
       .from("meetings")
       .upsert({
         title: transcript.title,
-        start_time: transcript.date,
+        start_time: startTime,
         fireflies_id: transcriptId,
         gamma_url: gammaUrl,
         export_url: exportUrl,
@@ -78,7 +80,7 @@ async function processTranscript(transcriptId: string) {
     await sendRecapEmail({
       to: transcript.participants,
       meetingTitle: transcript.title,
-      meetingDate: transcript.date,
+      meetingDate: startTime,
       gammaUrl: gammaMeetUrl,
       previewImage,
     }).catch((err) => console.error("Email send failed:", err));
