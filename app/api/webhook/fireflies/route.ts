@@ -59,11 +59,14 @@ export async function processTranscript(transcriptId: string) {
     .lte("start_time", dayEnd.toISOString())
     .single();
 
+  let meetingId: string;
+
   if (existing) {
+    meetingId = existing.id;
     await supabase
       .from("meetings")
       .update({ gamma_url: gammaUrl, export_url: exportUrl, preview_image: previewImage, fireflies_id: transcriptId })
-      .eq("id", existing.id);
+      .eq("id", meetingId);
   } else {
     const { data: meeting } = await supabase
       .from("meetings")
@@ -78,19 +81,25 @@ export async function processTranscript(transcriptId: string) {
       .select()
       .single();
 
-    if (meeting) {
-      await supabase.from("meeting_invites").insert(
-        transcript.participants.map((email) => ({ meeting_id: meeting.id, email }))
-      );
-    }
+    meetingId = meeting!.id;
   }
+
+  // Always upsert participants so they can see the recap in their dashboard
+  if (transcript.participants.length > 0) {
+    await supabase.from("meeting_invites").upsert(
+      transcript.participants.map((email) => ({ meeting_id: meetingId, email })),
+      { onConflict: "meeting_id,email" }
+    );
+  }
+
+  const gammaMeetUrl = `${process.env.APP_URL ?? "https://gammameet.vercel.app"}/meetings/${meetingId}`;
 
   if (transcript.participants.length > 0) {
     await sendRecapEmail({
       to: transcript.participants,
       meetingTitle: transcript.title,
       meetingDate: transcript.date,
-      gammaUrl,
+      gammaUrl: gammaMeetUrl,
       previewImage,
     }).catch((err) => console.error("Email send failed:", err));
   }
