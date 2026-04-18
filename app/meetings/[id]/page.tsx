@@ -79,14 +79,30 @@ export default async function MeetingPage({
 
         {meeting.gamma_url ? (
           <div className="space-y-4">
-            <p className="text-zinc-500 text-sm font-semibold uppercase tracking-widest">
-              Meeting Recap
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-zinc-500 text-sm font-semibold uppercase tracking-widest">
+                Meeting Recap
+              </p>
+              <a
+                href={meeting.gamma_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-violet-400 hover:text-violet-300 text-sm transition-colors"
+              >
+                Open in Gamma ↗
+              </a>
+            </div>
+            <iframe
+              src={meeting.gamma_url}
+              className="w-full rounded-xl border border-zinc-800"
+              style={{ height: "75vh" }}
+              allow="fullscreen"
+            />
             <a
               href={meeting.gamma_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-between bg-zinc-900 border border-violet-800 rounded-xl px-6 py-5 hover:border-violet-500 transition-colors group"
+              className="flex items-center justify-between bg-zinc-900 border border-violet-800 rounded-xl px-6 py-5 hover:border-violet-500 transition-colors group hidden"
             >
               <div className="space-y-1">
                 <p className="text-white font-semibold text-lg">View on Gamma</p>
