@@ -1,5 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { supabase } from "@/lib/supabase";
+
+export const maxDuration = 300;
 
 function verifyToken(req: NextRequest): boolean {
   const secret = process.env.FIREFLIES_WEBHOOK_SECRET;
@@ -28,17 +30,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true, test: true });
   }
 
-  // Enqueue the job — processing happens via /api/process-jobs
   await supabase
     .from("pending_jobs")
     .upsert({ transcript_id: transcriptId, status: "pending" }, { onConflict: "transcript_id" });
 
-  // Kick off processor immediately (fire and forget)
   const appUrl = process.env.APP_URL ?? "https://gammameet.vercel.app";
-  fetch(`${appUrl}/api/process-jobs`, {
-    method: "POST",
-    headers: { "x-cron-secret": process.env.CRON_SECRET ?? "" },
-  }).catch(() => {});
+
+  after(async () => {
+    await fetch(`${appUrl}/api/process-jobs`, {
+      method: "POST",
+      headers: { "x-cron-secret": process.env.CRON_SECRET ?? "" },
+    });
+  });
 
   return NextResponse.json({ received: true });
 }
