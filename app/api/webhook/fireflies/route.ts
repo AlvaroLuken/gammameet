@@ -1,5 +1,8 @@
-import { NextRequest, NextResponse, after } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { fetchTranscript, buildPromptFromTranscript } from "@/lib/fireflies";
+import { generateGammaPage } from "@/lib/gamma";
+import { sendRecapEmail } from "@/lib/email";
 
 export const maxDuration = 300;
 
@@ -30,18 +33,48 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true, test: true });
   }
 
-  await supabase
-    .from("pending_jobs")
-    .upsert({ transcript_id: transcriptId, status: "pending" }, { onConflict: "transcript_id" });
+  try {
+    const transcript = await fetchTranscript(transcriptId);
+    const content = buildPromptFromTranscript(transcript);
+    const { gammaUrl, exportUrl, previewImage } = await generateGammaPage(transcript.title, content);
 
-  const appUrl = process.env.APP_URL ?? "https://gammameet.vercel.app";
+    const startTime = new Date(Number(transcript.date)).toISOString();
 
-  after(async () => {
-    await fetch(`${appUrl}/api/process-jobs`, {
-      method: "POST",
-      headers: { "x-cron-secret": process.env.CRON_SECRET ?? "" },
-    });
-  });
+    const { data: meeting, error } = await supabase
+      .from("meetings")
+      .upsert({
+        title: transcript.title,
+        start_time: startTime,
+        fireflies_id: transcriptId,
+        gamma_url: gammaUrl,
+        export_url: exportUrl,
+        preview_image: previewImage,
+      }, { onConflict: "fireflies_id" })
+      .select()
+      .single();
 
-  return NextResponse.json({ received: true });
+    if (error || !meeting) throw new Error(`Failed to upsert meeting: ${error?.message}`);
+
+    if (transcript.participants.length > 0) {
+      await supabase.from("meeting_invites").upsert(
+        transcript.participants.map((email) => ({ meeting_id: meeting.id, email })),
+        { onConflict: "meeting_id,email" }
+      );
+
+      const gammaMeetUrl = `${process.env.APP_URL ?? "https://gammameet.vercel.app"}/meetings/${meeting.id}`;
+      await sendRecapEmail({
+        to: transcript.participants,
+        meetingTitle: transcript.title,
+        meetingDate: startTime,
+        gammaUrl: gammaMeetUrl,
+        previewImage,
+      }).catch((err) => console.error("Email send failed:", err));
+    }
+
+    console.log(`Processed: "${transcript.title}" → ${gammaUrl}`);
+    return NextResponse.json({ received: true });
+  } catch (err) {
+    console.error("Processing failed:", err);
+    return NextResponse.json({ error: String(err) }, { status: 500 });
+  }
 }
