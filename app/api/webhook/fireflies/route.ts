@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { fetchTranscript, buildPromptFromTranscript } from "@/lib/fireflies";
 import { generateGammaPage } from "@/lib/gamma";
+import { sendRecapEmail } from "@/lib/email";
 import { supabase } from "@/lib/supabase";
 
 function verifySignature(body: string, signature: string): boolean {
@@ -82,6 +83,16 @@ export async function processTranscript(transcriptId: string) {
         transcript.participants.map((email) => ({ meeting_id: meeting.id, email }))
       );
     }
+  }
+
+  if (transcript.participants.length > 0) {
+    await sendRecapEmail({
+      to: transcript.participants,
+      meetingTitle: transcript.title,
+      meetingDate: transcript.date,
+      gammaUrl,
+      previewImage,
+    }).catch((err) => console.error("Email send failed:", err));
   }
 
   console.log(`Processed: "${transcript.title}" → ${gammaUrl}`);
