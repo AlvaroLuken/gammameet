@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import crypto from "crypto";
 import { fetchTranscript, buildPromptFromTranscript } from "@/lib/fireflies";
 import { generateGammaPage } from "@/lib/gamma";
 import { sendRecapEmail } from "@/lib/email";
 import { supabase } from "@/lib/supabase";
 
-function verifySignature(body: string, signature: string): boolean {
+function verifyToken(req: NextRequest): boolean {
   const secret = process.env.FIREFLIES_WEBHOOK_SECRET;
   if (!secret) return true;
-  const expected = crypto.createHmac("sha256", secret).update(body).digest("hex");
-  const a = Buffer.from(expected);
-  const b = Buffer.from(signature.length === expected.length ? signature : expected);
-  return crypto.timingSafeEqual(a, b) && signature === expected;
+  return req.nextUrl.searchParams.get("token") === secret;
 }
 
 export async function GET() {
@@ -19,12 +15,11 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const rawBody = await req.text();
-  const signature = req.headers.get("x-hub-signature-256") ?? "";
-
-  if (!verifySignature(rawBody, signature)) {
-    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+  if (!verifyToken(req)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const rawBody = await req.text();
 
   let payload: { transcriptId?: string; meetingId?: string };
   try {
