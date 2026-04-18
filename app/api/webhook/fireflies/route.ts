@@ -52,12 +52,14 @@ export async function processTranscript(transcriptId: string) {
   const dayEnd = new Date(meetingDate);
   dayEnd.setHours(23, 59, 59, 999);
 
-  const { data: existing } = await supabase
+  // Try to match an existing calendar meeting on the same day
+  const { data: existingRows } = await supabase
     .from("meetings")
     .select("id")
     .gte("start_time", dayStart.toISOString())
-    .lte("start_time", dayEnd.toISOString())
-    .single();
+    .lte("start_time", dayEnd.toISOString());
+
+  const existing = existingRows?.[0] ?? null;
 
   let meetingId: string;
 
@@ -68,20 +70,22 @@ export async function processTranscript(transcriptId: string) {
       .update({ gamma_url: gammaUrl, export_url: exportUrl, preview_image: previewImage, fireflies_id: transcriptId })
       .eq("id", meetingId);
   } else {
-    const { data: meeting } = await supabase
+    // Upsert by fireflies_id so re-runs don't duplicate
+    const { data: meeting, error } = await supabase
       .from("meetings")
-      .insert({
+      .upsert({
         title: transcript.title,
         start_time: transcript.date,
         fireflies_id: transcriptId,
         gamma_url: gammaUrl,
         export_url: exportUrl,
         preview_image: previewImage,
-      })
+      }, { onConflict: "fireflies_id" })
       .select()
       .single();
 
-    meetingId = meeting!.id;
+    if (error || !meeting) throw new Error(`Failed to upsert meeting: ${error?.message}`);
+    meetingId = meeting.id;
   }
 
   // Always upsert participants so they can see the recap in their dashboard
