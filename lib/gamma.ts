@@ -1,20 +1,20 @@
-const GAMMA_API_URL = "https://api.gamma.app/v1";
+const GAMMA_API_URL = "https://public-api.gamma.app/v1.0";
 
 export async function generateGammaPage(
   title: string,
   content: string
 ): Promise<string> {
-  const res = await fetch(`${GAMMA_API_URL}/generate`, {
+  const res = await fetch(`${GAMMA_API_URL}/generations`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.GAMMA_API_KEY}`,
+      "X-API-KEY": process.env.GAMMA_API_KEY!,
     },
     body: JSON.stringify({
-      title,
-      text: content,
-      mode: "webpage",
-      theme: "auto",
+      inputText: `${title}\n\n${content}`,
+      textMode: "generate",
+      format: "presentation",
+      numCards: 8,
     }),
   });
 
@@ -23,26 +23,24 @@ export async function generateGammaPage(
   }
 
   const data = await res.json();
+  const generationId = data.generationId ?? data.id;
 
-  if (data.status === "pending" || data.status === "processing") {
-    return pollGammaStatus(data.id);
-  }
-
-  return data.url;
+  return pollGammaStatus(generationId);
 }
 
 async function pollGammaStatus(generationId: string): Promise<string> {
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 24; i++) {
     await new Promise((r) => setTimeout(r, 5000));
 
-    const res = await fetch(`${GAMMA_API_URL}/generate/${generationId}`, {
-      headers: { Authorization: `Bearer ${process.env.GAMMA_API_KEY}` },
+    const res = await fetch(`${GAMMA_API_URL}/generations/${generationId}`, {
+      headers: { "X-API-KEY": process.env.GAMMA_API_KEY! },
     });
 
     const data = await res.json();
-    if (data.status === "completed" && data.url) return data.url;
+
+    if (data.status === "completed" && data.gammaUrl) return data.gammaUrl;
     if (data.status === "failed") throw new Error("Gamma generation failed");
   }
 
-  throw new Error("Gamma generation timed out");
+  throw new Error("Gamma generation timed out after 2 minutes");
 }
