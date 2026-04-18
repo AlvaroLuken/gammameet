@@ -10,12 +10,34 @@ export async function GET() {
   }
 
   const accessToken = session.user.accessToken;
-  if (!accessToken) {
-    return NextResponse.json({ error: "No access token" }, { status: 401 });
+
+  // Sync calendar in background — don't block the response
+  if (accessToken) {
+    syncCalendar(session.user.email, accessToken).catch(console.error);
   }
 
-  // Sync calendar meetings into DB
-  const calendarMeetings = await getUserMeetings(accessToken);
+  // Return only meetings with recaps ready
+  const { data: invites } = await supabase
+    .from("meeting_invites")
+    .select("meeting_id")
+    .eq("email", session.user.email);
+
+  const ids = (invites ?? []).map((r) => r.meeting_id);
+  if (ids.length === 0) return NextResponse.json([]);
+
+  const { data: meetings } = await supabase
+    .from("meetings")
+    .select("*")
+    .in("id", ids)
+    .not("gamma_url", "is", null)
+    .order("start_time", { ascending: false });
+
+  return NextResponse.json(meetings ?? []);
+}
+
+async function syncCalendar(userEmail: string, accessToken: string) {
+  const { getUserMeetings: fetchMeetings } = await import("@/lib/calendar");
+  const calendarMeetings = await fetchMeetings(accessToken);
 
   for (const m of calendarMeetings) {
     const { data: existing } = await supabase
@@ -44,21 +66,4 @@ export async function GET() {
       }
     }
   }
-
-  // Return meetings this user is invited to
-  const { data: invites } = await supabase
-    .from("meeting_invites")
-    .select("meeting_id")
-    .eq("email", session.user.email);
-
-  const ids = (invites ?? []).map((r) => r.meeting_id);
-  if (ids.length === 0) return NextResponse.json([]);
-
-  const { data: meetings } = await supabase
-    .from("meetings")
-    .select("*")
-    .in("id", ids)
-    .order("start_time", { ascending: false });
-
-  return NextResponse.json(meetings ?? []);
 }

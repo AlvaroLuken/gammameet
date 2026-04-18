@@ -41,9 +41,6 @@ export default function Dashboard() {
       });
   }, []);
 
-  const withRecap = meetings.filter((m) => m.gamma_url);
-  const withoutRecap = meetings.filter((m) => !m.gamma_url);
-
   return (
     <div className="min-h-screen bg-black text-white">
       <header className="border-b border-zinc-800 px-8 py-5 flex items-center justify-between">
@@ -59,29 +56,16 @@ export default function Dashboard() {
 
       <main className="max-w-4xl mx-auto px-8 py-12 space-y-12">
         {loading ? (
-          <div className="text-zinc-500 text-center py-20">Loading your meetings...</div>
+          <div className="text-zinc-500 text-center py-20">Loading your recaps...</div>
         ) : (
           <>
-            {withRecap.length > 0 && (
+            {meetings.length > 0 && (
               <section className="space-y-4">
                 <h2 className="text-zinc-400 text-sm font-semibold uppercase tracking-widest">
-                  Recaps Ready ({withRecap.length})
+                  Meeting Recaps ({meetings.length})
                 </h2>
                 <div className="space-y-3">
-                  {withRecap.map((m) => (
-                    <MeetingCard key={m.id} meeting={m} />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {withoutRecap.length > 0 && (
-              <section className="space-y-4">
-                <h2 className="text-zinc-400 text-sm font-semibold uppercase tracking-widest">
-                  All Meetings ({withoutRecap.length})
-                </h2>
-                <div className="space-y-3">
-                  {withoutRecap.map((m) => (
+                  {meetings.map((m) => (
                     <MeetingCard key={m.id} meeting={m} />
                   ))}
                 </div>
@@ -90,9 +74,9 @@ export default function Dashboard() {
 
             {meetings.length === 0 && (
               <div className="text-center py-20 space-y-3">
-                <p className="text-zinc-400 text-lg">No meetings found in the last 3 months.</p>
+                <p className="text-zinc-400 text-lg">No recaps yet.</p>
                 <p className="text-zinc-600 text-sm">
-                  Make sure Fireflies is connected to your calendar to start generating recaps.
+                  Add fred@fireflies.ai to a meeting to get your first recap.
                 </p>
               </div>
             )}
