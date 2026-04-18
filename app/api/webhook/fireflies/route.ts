@@ -33,7 +33,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing transcriptId" }, { status: 400 });
   }
 
-  // Respond immediately, process in background
   processTranscript(transcriptId).catch((err) =>
     console.error("Error processing transcript:", err)
   );
@@ -41,12 +40,11 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ received: true });
 }
 
-async function processTranscript(transcriptId: string) {
+export async function processTranscript(transcriptId: string) {
   const transcript = await fetchTranscript(transcriptId);
   const content = buildPromptFromTranscript(transcript);
-  const gammaUrl = await generateGammaPage(transcript.title, content);
+  const { gammaUrl, exportUrl } = await generateGammaPage(transcript.title, content);
 
-  // Try to match to an existing calendar meeting by title + date proximity
   const meetingDate = new Date(transcript.date);
   const dayStart = new Date(meetingDate);
   dayStart.setHours(0, 0, 0, 0);
@@ -58,16 +56,14 @@ async function processTranscript(transcriptId: string) {
     .select("id")
     .gte("start_time", dayStart.toISOString())
     .lte("start_time", dayEnd.toISOString())
-    .ilike("title", `%${transcript.title.split(" ")[0]}%`)
     .single();
 
   if (existing) {
     await supabase
       .from("meetings")
-      .update({ gamma_url: gammaUrl, fireflies_id: transcriptId })
+      .update({ gamma_url: gammaUrl, export_url: exportUrl, fireflies_id: transcriptId })
       .eq("id", existing.id);
   } else {
-    // No calendar match — create a standalone meeting entry
     const { data: meeting } = await supabase
       .from("meetings")
       .insert({
@@ -75,16 +71,15 @@ async function processTranscript(transcriptId: string) {
         start_time: transcript.date,
         fireflies_id: transcriptId,
         gamma_url: gammaUrl,
+        export_url: exportUrl,
       })
       .select()
       .single();
 
     if (meeting) {
-      const invites = transcript.participants.map((email) => ({
-        meeting_id: meeting.id,
-        email,
-      }));
-      await supabase.from("meeting_invites").insert(invites);
+      await supabase.from("meeting_invites").insert(
+        transcript.participants.map((email) => ({ meeting_id: meeting.id, email }))
+      );
     }
   }
 

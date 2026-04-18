@@ -36,27 +36,43 @@ export default async function MeetingPage({
         </h1>
       </header>
 
-      <main className="max-w-4xl mx-auto px-8 py-12 space-y-8">
-        <div className="space-y-2">
-          <h2 className="text-3xl font-bold">{meeting.title}</h2>
-          <p className="text-zinc-400">
-            {new Date(meeting.start_time).toLocaleDateString("en-US", {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-            {" · "}
-            {new Date(meeting.start_time).toLocaleTimeString("en-US", {
-              hour: "numeric",
-              minute: "2-digit",
-            })}
-            {" – "}
-            {new Date(meeting.end_time).toLocaleTimeString("en-US", {
-              hour: "numeric",
-              minute: "2-digit",
-            })}
-          </p>
+      <main className="max-w-5xl mx-auto px-8 py-12 space-y-8">
+        <div className="flex items-start justify-between">
+          <div className="space-y-2">
+            <h2 className="text-3xl font-bold">{meeting.title}</h2>
+            <p className="text-zinc-400">
+              {new Date(meeting.start_time).toLocaleDateString("en-US", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+              {" · "}
+              {new Date(meeting.start_time).toLocaleTimeString("en-US", {
+                hour: "numeric",
+                minute: "2-digit",
+              })}
+              {meeting.end_time && (
+                <>
+                  {" – "}
+                  {new Date(meeting.end_time).toLocaleTimeString("en-US", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })}
+                </>
+              )}
+            </p>
+          </div>
+          {meeting.gamma_url && (
+            <a
+              href={meeting.gamma_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-zinc-500 hover:text-violet-400 text-sm transition-colors whitespace-nowrap"
+            >
+              Open in Gamma ↗
+            </a>
+          )}
         </div>
 
         {attendees.length > 0 && (
@@ -77,42 +93,43 @@ export default async function MeetingPage({
           </div>
         )}
 
-        {meeting.gamma_url ? (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <p className="text-zinc-500 text-sm font-semibold uppercase tracking-widest">
-                Meeting Recap
-              </p>
-              <a
-                href={meeting.gamma_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-violet-400 hover:text-violet-300 text-sm transition-colors"
-              >
-                Open in Gamma ↗
-              </a>
+        {meeting.export_url ? (
+          <div className="space-y-3">
+            <p className="text-zinc-500 text-sm font-semibold uppercase tracking-widest">
+              Meeting Recap
+            </p>
+            <div className="rounded-xl overflow-hidden border border-zinc-800">
+              <embed
+                src={meeting.export_url}
+                type="application/pdf"
+                className="w-full"
+                style={{ height: "80vh" }}
+              />
             </div>
-            <iframe
-              src={meeting.gamma_url}
-              className="w-full rounded-xl border border-zinc-800"
-              style={{ height: "75vh" }}
-              allow="fullscreen"
-            />
+            <a
+              href={meeting.export_url}
+              download
+              className="inline-block text-zinc-500 hover:text-white text-sm transition-colors"
+            >
+              ↓ Download PDF
+            </a>
+          </div>
+        ) : meeting.gamma_url ? (
+          <div className="space-y-3">
+            <p className="text-zinc-500 text-sm font-semibold uppercase tracking-widest">
+              Meeting Recap
+            </p>
             <a
               href={meeting.gamma_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-between bg-zinc-900 border border-violet-800 rounded-xl px-6 py-5 hover:border-violet-500 transition-colors group hidden"
+              className="flex items-center justify-between bg-zinc-900 border border-violet-800 rounded-xl px-6 py-5 hover:border-violet-500 transition-colors group"
             >
               <div className="space-y-1">
                 <p className="text-white font-semibold text-lg">View on Gamma</p>
-                <p className="text-zinc-500 text-sm">
-                  AI-generated recap · beautifully designed
-                </p>
+                <p className="text-zinc-500 text-sm">AI-generated recap · beautifully designed</p>
               </div>
-              <span className="text-violet-400 text-2xl group-hover:translate-x-1 transition-transform">
-                →
-              </span>
+              <span className="text-violet-400 text-2xl group-hover:translate-x-1 transition-transform">→</span>
             </a>
           </div>
         ) : (

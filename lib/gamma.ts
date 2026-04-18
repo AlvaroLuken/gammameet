@@ -1,9 +1,14 @@
 const GAMMA_API_URL = "https://public-api.gamma.app/v1.0";
 
+export interface GammaResult {
+  gammaUrl: string;
+  exportUrl: string | null;
+}
+
 export async function generateGammaPage(
   title: string,
   content: string
-): Promise<string> {
+): Promise<GammaResult> {
   const res = await fetch(`${GAMMA_API_URL}/generations`, {
     method: "POST",
     headers: {
@@ -15,6 +20,7 @@ export async function generateGammaPage(
       textMode: "generate",
       format: "presentation",
       numCards: 8,
+      exportAs: "pdf",
     }),
   });
 
@@ -28,7 +34,7 @@ export async function generateGammaPage(
   return pollGammaStatus(generationId);
 }
 
-async function pollGammaStatus(generationId: string): Promise<string> {
+async function pollGammaStatus(generationId: string): Promise<GammaResult> {
   for (let i = 0; i < 24; i++) {
     await new Promise((r) => setTimeout(r, 5000));
 
@@ -38,7 +44,12 @@ async function pollGammaStatus(generationId: string): Promise<string> {
 
     const data = await res.json();
 
-    if (data.status === "completed" && data.gammaUrl) return data.gammaUrl;
+    if (data.status === "completed" && data.gammaUrl) {
+      return {
+        gammaUrl: data.gammaUrl,
+        exportUrl: data.exportUrl ?? null,
+      };
+    }
     if (data.status === "failed") throw new Error("Gamma generation failed");
   }
 
