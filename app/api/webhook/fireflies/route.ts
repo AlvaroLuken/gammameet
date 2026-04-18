@@ -14,6 +14,10 @@ function verifySignature(body: string, signature: string): boolean {
   return crypto.timingSafeEqual(a, b) && signature === expected;
 }
 
+export async function GET() {
+  return NextResponse.json({ ok: true });
+}
+
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
   const signature = req.headers.get("x-hub-signature-256") ?? "";
