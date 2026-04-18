@@ -47,29 +47,9 @@ async function processTranscript(transcriptId: string) {
   const content = buildPromptFromTranscript(transcript);
   const { gammaUrl, exportUrl, previewImage } = await generateGammaPage(transcript.title, content);
 
-  const meetingDate = new Date(transcript.date);
-  const dayStart = new Date(meetingDate);
-  dayStart.setHours(0, 0, 0, 0);
-  const dayEnd = new Date(meetingDate);
-  dayEnd.setHours(23, 59, 59, 999);
-
-  const { data: existingRows } = await supabase
-    .from("meetings")
-    .select("id")
-    .gte("start_time", dayStart.toISOString())
-    .lte("start_time", dayEnd.toISOString());
-
-  const existing = existingRows?.[0] ?? null;
   let meetingId: string;
 
-  if (existing) {
-    meetingId = existing.id;
-    await supabase
-      .from("meetings")
-      .update({ gamma_url: gammaUrl, export_url: exportUrl, preview_image: previewImage, fireflies_id: transcriptId })
-      .eq("id", meetingId);
-  } else {
-    const { data: meeting, error } = await supabase
+  const { data: meeting, error } = await supabase
       .from("meetings")
       .upsert({
         title: transcript.title,
@@ -82,9 +62,8 @@ async function processTranscript(transcriptId: string) {
       .select()
       .single();
 
-    if (error || !meeting) throw new Error(`Failed to upsert meeting: ${error?.message}`);
-    meetingId = meeting.id;
-  }
+  if (error || !meeting) throw new Error(`Failed to upsert meeting: ${error?.message}`);
+  meetingId = meeting.id;
 
   if (transcript.participants.length > 0) {
     await supabase.from("meeting_invites").upsert(
