@@ -1,4 +1,6 @@
-import { NextRequest, NextResponse, after } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+
+export const maxDuration = 300; // 5 minutes — allows Gamma generation to complete
 import { fetchTranscript, buildPromptFromTranscript } from "@/lib/fireflies";
 import { generateGammaPage } from "@/lib/gamma";
 import { sendRecapEmail } from "@/lib/email";
@@ -34,13 +36,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true, test: true });
   }
 
-  after(async () => {
-    try {
-      await processTranscript(transcriptId);
-    } catch (err) {
-      console.error("Error processing transcript:", err);
-    }
-  });
+  try {
+    await processTranscript(transcriptId);
+  } catch (err) {
+    console.error("Error processing transcript:", err);
+  }
 
   return NextResponse.json({ received: true });
 }
