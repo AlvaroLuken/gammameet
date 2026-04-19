@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { MeetingTime } from "@/components/MeetingTime";
 
 function letterAvatar(str: string) {
   const colors = ["bg-violet-500", "bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-rose-500", "bg-cyan-500", "bg-pink-500", "bg-orange-500"];
@@ -33,17 +34,6 @@ export default async function MeetingPage({
     (i: { email: string }) => i.email
   ) ?? [];
 
-  const formattedDate = new Date(meeting.start_time).toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-
-  const formattedTime = new Date(meeting.start_time).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
 
   return (
     <div className="h-screen flex flex-col bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white overflow-hidden">
@@ -69,8 +59,7 @@ export default async function MeetingPage({
         <aside className="w-72 shrink-0 border-r border-zinc-200 dark:border-zinc-800 flex flex-col gap-6 p-6 overflow-y-auto bg-white dark:bg-zinc-950">
           <div className="space-y-1">
             <h2 className="text-lg font-bold leading-snug">{meeting.title}</h2>
-            <p className="text-zinc-500 dark:text-zinc-400 text-sm">{formattedDate}</p>
-            <p className="text-zinc-400 dark:text-zinc-500 text-sm">{formattedTime}</p>
+            <MeetingTime startTime={meeting.start_time} />
           </div>
 
           {attendees.length > 0 && (
