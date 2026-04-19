@@ -4,6 +4,13 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
+function letterAvatar(str: string) {
+  const colors = ["bg-violet-500", "bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-rose-500", "bg-cyan-500", "bg-pink-500", "bg-orange-500"];
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  return { color: colors[Math.abs(hash) % colors.length], letter: str[0].toUpperCase() };
+}
+
 export default async function MeetingPage({
   params,
 }: {
@@ -72,14 +79,17 @@ export default async function MeetingPage({
                 Attendees
               </p>
               <div className="flex flex-col gap-1.5">
-                {attendees.map((email) => (
-                  <span
-                    key={email}
-                    className="text-sm text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 rounded-lg truncate"
-                  >
-                    {email}
-                  </span>
-                ))}
+                {attendees.map((email) => {
+                  const { color, letter } = letterAvatar(email);
+                  return (
+                    <div key={email} className="flex items-center gap-2.5 bg-zinc-100 dark:bg-zinc-800 px-3 py-2 rounded-lg">
+                      <span className={`w-7 h-7 shrink-0 rounded-full ${color} text-white text-xs flex items-center justify-center font-bold`}>
+                        {letter}
+                      </span>
+                      <span className="text-sm text-zinc-600 dark:text-zinc-400 truncate">{email}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
