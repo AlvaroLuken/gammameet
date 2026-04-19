@@ -72,7 +72,7 @@ export default async function MeetingPage({
               href={meeting.gamma_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-zinc-500 hover:text-violet-400 text-sm transition-colors whitespace-nowrap"
+              className="text-zinc-500 hover:text-violet-400 text-sm transition-colors whitespace-nowrap cursor-pointer"
             >
               Open in Gamma ↗
             </a>
@@ -113,7 +113,7 @@ export default async function MeetingPage({
             <a
               href={meeting.export_url}
               download
-              className="inline-block text-zinc-500 hover:text-white text-sm transition-colors"
+              className="inline-block text-zinc-500 hover:text-white text-sm transition-colors cursor-pointer"
             >
               ↓ Download PDF
             </a>
@@ -127,7 +127,7 @@ export default async function MeetingPage({
               href={meeting.gamma_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-between bg-zinc-900 border border-violet-800 rounded-xl px-6 py-5 hover:border-violet-500 transition-colors group"
+              className="flex items-center justify-between bg-zinc-900 border border-violet-800 rounded-xl px-6 py-5 hover:border-violet-500 transition-colors group cursor-pointer"
             >
               <div className="space-y-1">
                 <p className="text-white font-semibold text-lg">View on Gamma</p>

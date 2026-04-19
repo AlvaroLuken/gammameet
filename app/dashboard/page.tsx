@@ -58,7 +58,7 @@ export default function Dashboard() {
         <div className="flex items-center gap-4">
           <ThemeToggle />
           <form action="/api/auth/signout" method="POST">
-            <button className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-sm transition-colors">
+            <button className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-sm transition-colors cursor-pointer">
               Sign out
             </button>
           </form>
@@ -100,7 +100,7 @@ function MeetingCard({ meeting }: { meeting: Meeting }) {
   return (
     <Link
       href={`/meetings/${meeting.id}`}
-      className="group flex flex-col bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden hover:border-violet-400 dark:hover:border-violet-600 hover:shadow-lg transition-all"
+      className="group flex flex-col bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden hover:border-violet-400 dark:hover:border-violet-600 hover:shadow-lg transition-all cursor-pointer"
     >
       {/* Preview image */}
       <div className="relative w-full aspect-video bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
