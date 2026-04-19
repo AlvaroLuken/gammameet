@@ -71,6 +71,7 @@ async function fetchMeetings() {
 export default function DashboardClient({ user }: { user: User }) {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
   const prevIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -90,7 +91,10 @@ export default function DashboardClient({ user }: { user: User }) {
     return () => clearInterval(interval);
   }, []);
 
-  const groups = groupByDate(meetings);
+  const filtered = query.trim()
+    ? meetings.filter((m) => m.title.toLowerCase().includes(query.toLowerCase()))
+    : meetings;
+  const groups = groupByDate(filtered);
   const { color, letter } = letterAvatar(user.name || user.email);
 
   return (
@@ -123,7 +127,15 @@ export default function DashboardClient({ user }: { user: User }) {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-8 py-10 space-y-10">
+      <main className="max-w-5xl mx-auto px-8 py-10 space-y-6">
+        <input
+          type="text"
+          placeholder="Search decks..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="w-full max-w-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-full px-5 py-2.5 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-violet-400 dark:focus:border-violet-600 transition-colors"
+        />
+        <div className="space-y-10">
         {loading ? (
           <div className="space-y-10">
             {[0, 1].map((g) => (
@@ -146,15 +158,21 @@ export default function DashboardClient({ user }: { user: User }) {
               </div>
             ))}
           </div>
-        ) : meetings.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <div className="text-center py-20 space-y-3">
-            <p className="text-zinc-500 text-lg">No decks yet.</p>
-            <p className="text-zinc-400 text-sm">
-              Add <span className="font-mono bg-zinc-100 dark:bg-zinc-900 px-2 py-0.5 rounded">fred@fireflies.ai</span> to a meeting to get your first deck.
-            </p>
+            {query ? (
+              <p className="text-zinc-500 text-lg">No decks match &ldquo;{query}&rdquo;</p>
+            ) : (
+              <>
+                <p className="text-zinc-500 text-lg">No decks yet.</p>
+                <p className="text-zinc-400 text-sm">
+                  Add <span className="font-mono bg-zinc-100 dark:bg-zinc-900 px-2 py-0.5 rounded">fred@fireflies.ai</span> to a meeting to get your first deck.
+                </p>
+              </>
+            )}
           </div>
         ) : (
-          <div className="space-y-10">
+          <>
             {groups.map(({ label, meetings: ms }) => (
               <div key={label} className="space-y-4">
                 <div className="flex items-center gap-3">
@@ -169,8 +187,9 @@ export default function DashboardClient({ user }: { user: User }) {
                 </div>
               </div>
             ))}
-          </div>
+          </>
         )}
+        </div>
       </main>
     </div>
   );

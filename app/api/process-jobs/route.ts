@@ -60,6 +60,8 @@ async function processTranscript(transcriptId: string) {
         gamma_url: gammaUrl,
         export_url: exportUrl,
         preview_image: previewImage,
+        summary: transcript.summary?.overview ?? null,
+        action_items: transcript.summary?.action_items ?? null,
       }, { onConflict: "fireflies_id" })
       .select()
       .single();

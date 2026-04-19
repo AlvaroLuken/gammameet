@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { MeetingTime } from "@/components/MeetingTime";
+import { CopyShareButton } from "@/components/CopyShareButton";
+import { DeleteMeetingButton } from "@/components/DeleteMeetingButton";
 
 function letterAvatar(str: string) {
   const colors = ["bg-violet-500", "bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-rose-500", "bg-cyan-500", "bg-pink-500", "bg-orange-500"];
@@ -12,11 +14,7 @@ function letterAvatar(str: string) {
   return { color: colors[Math.abs(hash) % colors.length], letter: str[0].toUpperCase() };
 }
 
-export default async function MeetingPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function MeetingPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session) redirect("/");
 
@@ -30,10 +28,7 @@ export default async function MeetingPage({
 
   if (!meeting) redirect("/dashboard");
 
-  const attendees: string[] = meeting.meeting_invites?.map(
-    (i: { email: string }) => i.email
-  ) ?? [];
-
+  const attendees: string[] = meeting.meeting_invites?.map((i: { email: string }) => i.email) ?? [];
 
   return (
     <div className="h-screen flex flex-col bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white overflow-hidden">
@@ -56,7 +51,7 @@ export default async function MeetingPage({
       {/* Body: sidebar + deck */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left sidebar */}
-        <aside className="w-72 shrink-0 border-r border-zinc-200 dark:border-zinc-800 flex flex-col gap-6 p-6 overflow-y-auto bg-white dark:bg-zinc-950">
+        <aside className="w-72 shrink-0 border-r border-zinc-200 dark:border-zinc-800 flex flex-col gap-5 p-6 overflow-y-auto bg-white dark:bg-zinc-950">
           <div className="space-y-1">
             <h2 className="text-lg font-bold leading-snug">{meeting.title}</h2>
             <MeetingTime startTime={meeting.start_time} />
@@ -64,9 +59,7 @@ export default async function MeetingPage({
 
           {attendees.length > 0 && (
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
-                Attendees
-              </p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Attendees</p>
               <div className="flex flex-col gap-1.5">
                 {attendees.map((email) => {
                   const { color, letter } = letterAvatar(email);
@@ -80,6 +73,20 @@ export default async function MeetingPage({
                   );
                 })}
               </div>
+            </div>
+          )}
+
+          {meeting.summary && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Summary</p>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">{meeting.summary}</p>
+            </div>
+          )}
+
+          {meeting.action_items && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Action Items</p>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed whitespace-pre-line">{meeting.action_items}</p>
             </div>
           )}
 
@@ -103,6 +110,8 @@ export default async function MeetingPage({
                 ↓ Download PDF
               </a>
             )}
+            <CopyShareButton id={id} />
+            <DeleteMeetingButton id={id} />
           </div>
         </aside>
 
