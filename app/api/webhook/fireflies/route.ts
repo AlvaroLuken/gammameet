@@ -21,18 +21,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let payload: { transcriptId?: string; meetingId?: string };
+  let payload: { meeting_id?: string; event?: string };
   try {
     payload = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  console.log("Fireflies payload:", JSON.stringify(payload));
-
-  const transcriptId = payload.transcriptId ?? payload.meetingId;
-  if (!transcriptId) {
-    console.log("No transcriptId found in payload — treating as test ping");
+  const transcriptId = payload.meeting_id;
+  if (!transcriptId || payload.event === "test") {
     return NextResponse.json({ received: true, test: true });
   }
 
