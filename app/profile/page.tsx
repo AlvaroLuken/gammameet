@@ -25,9 +25,9 @@ export default async function ProfilePage() {
           <Link href="/dashboard" className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors text-sm cursor-pointer">
             ← Dashboard
           </Link>
-          <h1 className="text-2xl font-bold">
+          <Link href="/dashboard" className="text-2xl font-bold hover:opacity-80 transition-opacity">
             Gamma<span className="text-violet-500">Meet</span>
-          </h1>
+          </Link>
         </div>
         <ThemeToggle />
       </header>

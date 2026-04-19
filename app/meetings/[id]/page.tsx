@@ -33,9 +33,9 @@ export default async function MeetingPage({
           <Link href="/dashboard" className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors text-sm">
             ← Back
           </Link>
-          <h1 className="text-2xl font-bold">
+          <Link href="/dashboard" className="text-2xl font-bold hover:opacity-80 transition-opacity">
             Gamma<span className="text-violet-500">Meet</span>
-          </h1>
+          </Link>
         </div>
         <ThemeToggle />
       </header>
@@ -72,7 +72,7 @@ export default async function MeetingPage({
               href={meeting.gamma_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-zinc-500 hover:text-violet-400 text-sm transition-colors whitespace-nowrap cursor-pointer"
+              className="inline-flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-violet-100 dark:hover:bg-violet-900 text-zinc-700 dark:text-zinc-300 hover:text-violet-700 dark:hover:text-violet-300 text-sm font-medium px-4 py-2 rounded-full transition-colors cursor-pointer whitespace-nowrap"
             >
               Open in Gamma ↗
             </a>
@@ -113,7 +113,7 @@ export default async function MeetingPage({
             <a
               href={meeting.export_url}
               download
-              className="inline-block text-zinc-500 hover:text-white text-sm transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 text-sm font-medium px-4 py-2 rounded-full transition-colors cursor-pointer"
             >
               ↓ Download PDF
             </a>

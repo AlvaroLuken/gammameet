@@ -68,9 +68,9 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white transition-colors">
       <header className="border-b border-zinc-200 dark:border-zinc-800 px-8 py-5 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">
+        <Link href="/dashboard" className="text-2xl font-bold hover:opacity-80 transition-opacity">
           Gamma<span className="text-violet-500">Meet</span>
-        </h1>
+        </Link>
         <div className="flex items-center gap-4">
           <ThemeToggle />
           <Link href="/profile" className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-sm transition-colors cursor-pointer">
@@ -150,8 +150,8 @@ function MeetingCard({ meeting }: { meeting: Meeting }) {
         <p className="text-zinc-500 dark:text-zinc-400 text-xs">
           {formatDate(meeting.start_time)} · {formatTime(meeting.start_time)}
         </p>
-        <span className="mt-1 inline-flex items-center gap-1 text-violet-600 dark:text-violet-400 text-xs font-semibold">
-          View Recap →
+        <span className="mt-1 inline-flex items-center gap-1 bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition-colors">
+          View Deck →
         </span>
       </div>
     </Link>
