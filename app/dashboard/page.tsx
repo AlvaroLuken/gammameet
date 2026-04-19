@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -36,17 +36,33 @@ function durationMins(start: string, end: string) {
   return Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000);
 }
 
+async function fetchMeetings() {
+  const r = await fetch("/api/meetings");
+  return r.json() as Promise<Meeting[]>;
+}
+
 export default function Dashboard() {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
+  const prevIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    fetch("/api/meetings")
-      .then((r) => r.json())
-      .then((data) => {
+    fetchMeetings().then((data) => {
+      setMeetings(data);
+      prevIds.current = new Set(data.map((m) => m.id));
+      setLoading(false);
+    });
+
+    const interval = setInterval(async () => {
+      const data = await fetchMeetings();
+      const newOnes = data.filter((m) => !prevIds.current.has(m.id));
+      if (newOnes.length > 0) {
         setMeetings(data);
-        setLoading(false);
-      });
+        prevIds.current = new Set(data.map((m) => m.id));
+      }
+    }, 20000);
+
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -57,6 +73,9 @@ export default function Dashboard() {
         </h1>
         <div className="flex items-center gap-4">
           <ThemeToggle />
+          <Link href="/profile" className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-sm transition-colors cursor-pointer">
+            Profile
+          </Link>
           <form action="/api/auth/signout" method="POST">
             <button className="text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-sm transition-colors cursor-pointer">
               Sign out

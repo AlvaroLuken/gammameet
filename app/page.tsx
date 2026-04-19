@@ -1,5 +1,15 @@
+import type { Metadata } from "next";
 import { auth, signIn } from "@/lib/auth";
 import { redirect } from "next/navigation";
+
+export const metadata: Metadata = {
+  title: "GammaMeet — Every meeting, beautifully decked",
+  description: "GammaMeet turns your meeting recordings into stunning AI-generated presentation decks — automatically, the moment your meeting ends.",
+  openGraph: {
+    title: "GammaMeet — Every meeting, beautifully decked",
+    description: "GammaMeet turns your meeting recordings into stunning AI-generated presentation decks — automatically, the moment your meeting ends.",
+  },
+};
 
 async function handleSignIn() {
   "use server";
