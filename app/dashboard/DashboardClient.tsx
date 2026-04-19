@@ -59,7 +59,8 @@ function formatTime(iso: string) {
 }
 
 function durationMins(start: string, end: string) {
-  return Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000);
+  const mins = Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000);
+  return mins > 0 && mins < 600 ? mins : null;
 }
 
 async function fetchMeetings() {
@@ -124,7 +125,27 @@ export default function DashboardClient({ user }: { user: User }) {
 
       <main className="max-w-5xl mx-auto px-8 py-10 space-y-10">
         {loading ? (
-          <div className="text-zinc-400 text-center py-20">Loading your decks...</div>
+          <div className="space-y-10">
+            {[0, 1].map((g) => (
+              <div key={g} className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-3 w-16 bg-zinc-200 dark:bg-zinc-800 rounded-full animate-pulse" />
+                  <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="flex flex-col bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden">
+                      <div className="w-full aspect-video bg-zinc-100 dark:bg-zinc-800 animate-pulse" />
+                      <div className="p-4 space-y-2">
+                        <div className="h-4 bg-zinc-100 dark:bg-zinc-800 rounded animate-pulse w-3/4" />
+                        <div className="h-3 bg-zinc-100 dark:bg-zinc-800 rounded animate-pulse w-1/2" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         ) : meetings.length === 0 ? (
           <div className="text-center py-20 space-y-3">
             <p className="text-zinc-500 text-lg">No decks yet.</p>

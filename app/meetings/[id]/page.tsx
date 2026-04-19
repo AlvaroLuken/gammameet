@@ -118,12 +118,13 @@ export default async function MeetingPage({
         </aside>
 
         {/* Deck viewer */}
-        <main className="flex-1 overflow-hidden bg-zinc-100 dark:bg-zinc-900">
+        <main className="flex-1 overflow-y-auto bg-zinc-100 dark:bg-zinc-900 p-4">
           {meeting.export_url ? (
             <embed
               src={`${meeting.export_url}#toolbar=0&navpanes=0&scrollbar=0&statusbar=0`}
               type="application/pdf"
-              className="w-full h-full"
+              className="w-full rounded-xl"
+              style={{ height: "calc(100vh - 120px)" }}
             />
           ) : meeting.gamma_url ? (
             <div className="flex items-center justify-center h-full">
