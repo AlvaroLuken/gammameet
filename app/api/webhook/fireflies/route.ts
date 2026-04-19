@@ -28,8 +28,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
+  console.log("Fireflies payload:", JSON.stringify(payload));
+
   const transcriptId = payload.transcriptId ?? payload.meetingId;
   if (!transcriptId) {
+    console.log("No transcriptId found in payload — treating as test ping");
     return NextResponse.json({ received: true, test: true });
   }
 
