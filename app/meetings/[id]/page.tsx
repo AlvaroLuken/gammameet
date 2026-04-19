@@ -121,7 +121,7 @@ export default async function MeetingPage({
         <main className="flex-1 overflow-hidden bg-zinc-100 dark:bg-zinc-900">
           {meeting.export_url ? (
             <embed
-              src={meeting.export_url}
+              src={`${meeting.export_url}#toolbar=0&navpanes=0&scrollbar=0&statusbar=0`}
               type="application/pdf"
               className="w-full h-full"
             />
