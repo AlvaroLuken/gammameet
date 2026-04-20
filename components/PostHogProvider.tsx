@@ -24,7 +24,7 @@ export function PostHogProvider({
       person_profiles: "identified_only",
       loaded: (ph) => {
         console.log("[PostHog] init complete, distinct_id:", ph.get_distinct_id());
-        (window as unknown as { posthog: typeof posthog }).posthog = ph;
+        (window as unknown as Record<string, unknown>).posthog = ph;
       },
     });
   }, []);
