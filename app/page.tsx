@@ -57,112 +57,6 @@ export default async function Home() {
         <p className="text-zinc-400 text-sm">Connects to Google Calendar · No credit card required</p>
       </section>
 
-      {/* Insight strip */}
-      <section className="border-t border-zinc-200 dark:border-zinc-800 py-24 px-8">
-        <div className="max-w-6xl mx-auto space-y-20">
-          {[
-            {
-              number: "01",
-              icon: "💡",
-              accent: "from-amber-400 to-orange-500",
-              accentText: "text-amber-500",
-              tint: "bg-amber-50 dark:bg-amber-950/30",
-              headline: "Unlock hidden insights",
-              leadWords: 12,
-              body: "You never know what insights you can unlock from a deck full of organized visuals of the discussions that happened in your meeting.",
-            },
-            {
-              number: "02",
-              icon: "🚀",
-              accent: "from-violet-400 to-fuchsia-500",
-              accentText: "text-violet-500",
-              tint: "bg-violet-50 dark:bg-violet-950/30",
-              headline: "Brainstorms with exponential impact",
-              leadWords: 10,
-              body: "Creative brainstorms now have exponential impact — every idea is captured, structured, and shareable before the day is over.",
-            },
-            {
-              number: "03",
-              icon: "✦",
-              accent: "from-emerald-400 to-cyan-500",
-              accentText: "text-emerald-500",
-              tint: "bg-emerald-50 dark:bg-emerald-950/30",
-              headline: "From call to clarity",
-              leadWords: 7,
-              body: "Stop losing decisions in scattered notes. GammaMeet turns every conversation into a polished narrative your whole team can act on.",
-            },
-          ].map(({ number, icon, accent, accentText, tint, headline, leadWords, body }, i) => {
-            const words = body.split(" ");
-            const lead = words.slice(0, leadWords).join(" ");
-            const rest = words.slice(leadWords).join(" ");
-            const reversed = i % 2 === 1;
-            return (
-              <div key={headline} className={`grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-center`}>
-                <div className={`md:col-span-4 ${reversed ? "md:order-2" : ""}`}>
-                  <div className={`relative aspect-square max-w-[280px] mx-auto rounded-3xl ${tint} flex items-center justify-center overflow-hidden`}>
-                    <div className={`absolute inset-0 bg-gradient-to-br ${accent} opacity-10`} />
-                    <span className="text-7xl relative">{icon}</span>
-                    <span className={`absolute top-5 left-5 font-mono text-xs font-bold ${accentText} tracking-widest`}>{number}</span>
-                  </div>
-                </div>
-                <div className={`md:col-span-8 space-y-4 ${reversed ? "md:order-1 md:text-right" : ""}`}>
-                  <h3 className="text-3xl md:text-4xl font-bold tracking-tight leading-tight">
-                    {headline}
-                  </h3>
-                  <p className="text-xl md:text-2xl text-zinc-800 dark:text-zinc-200 leading-snug font-medium">
-                    {lead}
-                    {rest && <span className="text-zinc-500 dark:text-zinc-400 font-normal"> {rest}</span>}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* How it works */}
-      <section className="border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 py-24 px-8">
-        <div className="max-w-4xl mx-auto space-y-14">
-          <h2 className="text-3xl font-bold text-center">How it works</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-10">
-            {[
-              {
-                step: "01",
-                title: "Sign in with Google",
-                desc: "Connect your Google account so GammaMeet can see which meetings you attend.",
-              },
-              {
-                step: "02",
-                title: "GammaMeet Notetaker joins",
-                desc: "A bot joins your Google Meet automatically — just hit Admit when it knocks. For last-minute calls, add it manually.",
-              },
-              {
-                step: "03",
-                title: "Your deck appears instantly",
-                desc: "GammaMeet generates a beautiful Gamma presentation and emails it to all attendees.",
-              },
-            ].map(({ step, title, desc }) => (
-              <div key={step} className="space-y-3">
-                <span className="text-violet-500 font-mono text-sm font-bold">{step}</span>
-                <h3 className="text-lg font-semibold">{title}</h3>
-                <p className="text-zinc-500 dark:text-zinc-400 text-sm leading-relaxed">{desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Flow animation */}
-      <section className="border-t border-zinc-200 dark:border-zinc-800 py-20 px-8 bg-zinc-50 dark:bg-zinc-950">
-        <div className="max-w-4xl mx-auto space-y-10">
-          <div className="text-center space-y-2">
-            <p className="text-xs font-bold uppercase tracking-widest text-violet-500">The flow</p>
-            <h2 className="text-3xl font-bold">From meeting to deck in seconds.</h2>
-          </div>
-          <FlowAnimation />
-        </div>
-      </section>
-
       {/* App preview */}
       <section className="border-t border-zinc-200 dark:border-zinc-800 py-24 px-4 md:px-8">
         <div className="max-w-7xl mx-auto space-y-10">
@@ -226,6 +120,81 @@ export default async function Home() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section className="border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 py-24 px-8">
+        <div className="max-w-4xl mx-auto space-y-14">
+          <h2 className="text-3xl font-bold text-center">How it works</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-10">
+            {[
+              {
+                step: "01",
+                title: "Sign in with Google",
+                desc: "Connect your Google account so GammaMeet can see which meetings you attend.",
+              },
+              {
+                step: "02",
+                title: "GammaMeet Notetaker joins",
+                desc: "A bot joins your Google Meet automatically — just hit Admit when it knocks. For last-minute calls, add it manually.",
+              },
+              {
+                step: "03",
+                title: "Your deck appears instantly",
+                desc: "GammaMeet generates a beautiful Gamma presentation and emails it to all attendees.",
+              },
+            ].map(({ step, title, desc }) => (
+              <div key={step} className="space-y-3">
+                <span className="text-violet-500 font-mono text-sm font-bold">{step}</span>
+                <h3 className="text-lg font-semibold">{title}</h3>
+                <p className="text-zinc-500 dark:text-zinc-400 text-sm leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Flow animation */}
+      <section className="border-t border-zinc-200 dark:border-zinc-800 py-20 px-8 bg-zinc-50 dark:bg-zinc-950">
+        <div className="max-w-4xl mx-auto space-y-10">
+          <div className="text-center space-y-2">
+            <p className="text-xs font-bold uppercase tracking-widest text-violet-500">The flow</p>
+            <h2 className="text-3xl font-bold">From meeting to deck in seconds.</h2>
+          </div>
+          <FlowAnimation />
+        </div>
+      </section>
+
+      {/* Insight strip */}
+      <section className="border-t border-zinc-200 dark:border-zinc-800 py-20 px-8">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-8">
+          {[
+            {
+              icon: "💡",
+              headline: "Unlock hidden insights",
+              body: "You never know what insights you can unlock from a deck full of organized visuals of the discussions that happened in your meeting.",
+            },
+            {
+              icon: "🚀",
+              headline: "Brainstorms with exponential impact",
+              body: "Creative brainstorms now have exponential impact — every idea is captured, structured, and shareable before the day is over.",
+            },
+            {
+              icon: "✦",
+              headline: "From call to clarity",
+              body: "Stop losing decisions in scattered notes. GammaMeet turns every conversation into a polished narrative your whole team can act on.",
+            },
+          ].map(({ icon, headline, body }) => (
+            <div
+              key={headline}
+              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 space-y-3"
+            >
+              <span className="text-3xl">{icon}</span>
+              <h3 className="text-lg font-bold">{headline}</h3>
+              <p className="text-zinc-500 dark:text-zinc-400 text-sm leading-relaxed">{body}</p>
+            </div>
+          ))}
         </div>
       </section>
 
