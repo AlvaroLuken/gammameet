@@ -37,24 +37,43 @@ export default async function Home() {
       </nav>
 
       {/* Hero */}
-      <section className="max-w-4xl mx-auto px-8 py-28 text-center space-y-8">
-        <div className="inline-flex items-center gap-2 bg-violet-100 dark:bg-violet-950 text-violet-600 dark:text-violet-400 text-sm font-semibold px-4 py-1.5 rounded-full">
-          ✦ Powered by Gamma AI
+      <section className="relative overflow-hidden">
+        {/* Ambient glow */}
+        <div aria-hidden className="absolute inset-0 pointer-events-none">
+          <div className="absolute left-1/2 top-0 -translate-x-1/2 w-[900px] h-[600px] bg-gradient-radial from-violet-500/15 via-violet-500/5 to-transparent rounded-full blur-3xl" style={{ background: "radial-gradient(ellipse at center, rgba(139,92,246,0.18) 0%, rgba(139,92,246,0.04) 40%, transparent 70%)" }} />
         </div>
-        <h1 className="text-6xl sm:text-7xl font-bold tracking-tight leading-none">
-          Every meeting,<br />
-          <span className="text-violet-500">beautifully decked.</span>
-        </h1>
-        <p className="text-xl text-zinc-500 dark:text-zinc-400 max-w-xl mx-auto">
-          GammaMeet turns your meeting recordings into stunning AI-generated presentation decks — automatically, the moment your meeting ends.
-        </p>
-        <form action={handleSignIn}>
-          <button type="submit" className="inline-flex items-center gap-3 bg-white text-black font-semibold px-8 py-4 text-lg rounded-full hover:bg-zinc-100 transition-colors cursor-pointer">
-            <GoogleIcon />
-            Get started free
-          </button>
-        </form>
-        <p className="text-zinc-400 text-sm">Connects to Google Calendar · No credit card required</p>
+
+        <div className="relative max-w-5xl mx-auto px-8 pt-24 pb-16 text-center space-y-7">
+          <div className="inline-flex items-center gap-2 bg-violet-100 dark:bg-violet-950 text-violet-600 dark:text-violet-400 text-sm font-semibold px-4 py-1.5 rounded-full">
+            ✦ Powered by Gamma AI
+          </div>
+          <h1 className="text-6xl sm:text-7xl font-bold tracking-tight leading-none">
+            Every meeting,<br />
+            <span className="text-violet-500">beautifully decked.</span>
+          </h1>
+          <p className="text-xl text-zinc-500 dark:text-zinc-400 max-w-xl mx-auto">
+            GammaMeet turns your meeting recordings into stunning AI-generated presentation decks — automatically, the moment your meeting ends.
+          </p>
+          <div className="flex flex-col items-center gap-3 pt-2">
+            <form action={handleSignIn}>
+              <button type="submit" className="inline-flex items-center gap-3 bg-white text-black font-semibold px-8 py-4 text-lg rounded-full hover:bg-zinc-100 transition-colors cursor-pointer shadow-xl shadow-violet-500/10">
+                <GoogleIcon />
+                Get started free
+              </button>
+            </form>
+            <p className="text-zinc-400 text-sm">Connects to Google Calendar · No credit card required</p>
+          </div>
+        </div>
+
+        {/* Flow animation — lives inside the hero */}
+        <div className="relative max-w-5xl mx-auto px-4 md:px-8 pb-24">
+          <div className="relative rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/40 backdrop-blur-sm px-4 md:px-8 py-10 md:py-12">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-zinc-50 dark:bg-black px-4">
+              <p className="text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] text-violet-500">Meeting → Deck · in seconds</p>
+            </div>
+            <FlowAnimation />
+          </div>
+        </div>
       </section>
 
       {/* Insight strip */}
@@ -184,17 +203,6 @@ export default async function Home() {
               </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Flow animation */}
-      <section className="border-t border-zinc-200 dark:border-zinc-800 py-20 px-8 bg-zinc-50 dark:bg-zinc-950">
-        <div className="max-w-4xl mx-auto space-y-10">
-          <div className="text-center space-y-2">
-            <p className="text-xs font-bold uppercase tracking-widest text-violet-500">The flow</p>
-            <h2 className="text-3xl font-bold">From meeting to deck in seconds.</h2>
-          </div>
-          <FlowAnimation />
         </div>
       </section>
 
