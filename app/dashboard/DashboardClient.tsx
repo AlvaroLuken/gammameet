@@ -97,8 +97,6 @@ export default function DashboardClient({ user }: { user: User }) {
   const [showUpcoming, setShowUpcoming] = useState(false);
   const [showProcessing, setShowProcessing] = useState(false);
   const [showFailed, setShowFailed] = useState(false);
-  const [statusExpanded, setStatusExpanded] = useState(false);
-  const [prefsLoaded, setPrefsLoaded] = useState(false);
   const prevIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -108,10 +106,8 @@ export default function DashboardClient({ user }: { user: User }) {
         setShowUpcoming(p.showUpcoming ?? false);
         setShowProcessing(p.showProcessing ?? false);
         setShowFailed(p.showFailed ?? false);
-        if (p.showUpcoming || p.showProcessing || p.showFailed) setStatusExpanded(true);
-        setPrefsLoaded(true);
       })
-      .catch(() => setPrefsLoaded(true));
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -184,11 +180,7 @@ export default function DashboardClient({ user }: { user: User }) {
   const allAttendees = Array.from(
     new Set(statusFiltered.flatMap((m) => m.meeting_invites?.map((i) => i.email) ?? []))
   ).sort();
-  const hasActiveFilters = dateFilter !== "all" || attendeeFilter.size > 0 || query.trim() || showUpcoming || showProcessing || showFailed;
-
-  const upcomingCount = classified.filter((m) => m._upcoming).length;
-  const processingCount = classified.filter((m) => m._processing).length;
-  const failedCount = classified.filter((m) => m._failed).length;
+  const hasActiveFilters = dateFilter !== "all" || attendeeFilter.size > 0 || !!query.trim();
 
   const toggleAttendee = (email: string) => {
     setAttendeeFilter((prev) => {
@@ -202,9 +194,6 @@ export default function DashboardClient({ user }: { user: User }) {
     setQuery("");
     setDateFilter("all");
     setAttendeeFilter(new Set());
-    setShowUpcoming(false);
-    setShowProcessing(false);
-    setShowFailed(false);
   };
 
   const { color, letter } = letterAvatar(user.name || user.email);
@@ -261,35 +250,6 @@ export default function DashboardClient({ user }: { user: User }) {
             </button>
           ))}
         </div>
-      </div>
-
-      {/* Status filter */}
-      <div className="space-y-2">
-        <button
-          onClick={() => setStatusExpanded((o) => !o)}
-          className="flex items-center justify-between w-full px-1 cursor-pointer group"
-        >
-          <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-600 dark:group-hover:text-zinc-300 transition-colors">Show more</p>
-          <svg className={`w-3 h-3 text-zinc-400 transition-transform ${statusExpanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-        {statusExpanded && (
-          <div className="flex flex-col gap-1">
-            <button onClick={() => setShowUpcoming((o) => !o)} className={`flex items-center justify-between px-2.5 py-2 rounded-lg text-left transition-colors cursor-pointer ${showUpcoming ? "bg-violet-50 dark:bg-violet-950 border border-violet-200 dark:border-violet-800" : "hover:bg-zinc-100 dark:hover:bg-zinc-900"}`}>
-              <span className="text-xs text-zinc-600 dark:text-zinc-400">Upcoming meetings</span>
-              {upcomingCount > 0 && <span className="text-xs text-zinc-400">{upcomingCount}</span>}
-            </button>
-            <button onClick={() => setShowProcessing((o) => !o)} className={`flex items-center justify-between px-2.5 py-2 rounded-lg text-left transition-colors cursor-pointer ${showProcessing ? "bg-violet-50 dark:bg-violet-950 border border-violet-200 dark:border-violet-800" : "hover:bg-zinc-100 dark:hover:bg-zinc-900"}`}>
-              <span className="text-xs text-zinc-600 dark:text-zinc-400">Generating</span>
-              {processingCount > 0 && <span className="text-xs text-zinc-400">{processingCount}</span>}
-            </button>
-            <button onClick={() => setShowFailed((o) => !o)} className={`flex items-center justify-between px-2.5 py-2 rounded-lg text-left transition-colors cursor-pointer ${showFailed ? "bg-violet-50 dark:bg-violet-950 border border-violet-200 dark:border-violet-800" : "hover:bg-zinc-100 dark:hover:bg-zinc-900"}`}>
-              <span className="text-xs text-zinc-600 dark:text-zinc-400">Failed</span>
-              {failedCount > 0 && <span className="text-xs text-red-400">{failedCount}</span>}
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Attendee filter */}
@@ -614,7 +574,7 @@ function CardMenu({ id, title, previewImage, duration, onDeleted }: {
       </div>
       <div className="flex flex-col gap-1.5 p-4 flex-1">
         <p className="font-semibold text-zinc-900 dark:text-white leading-snug line-clamp-2">{title}</p>
-        <div className="mt-auto pt-2 flex items-center justify-between">
+        <div className="mt-auto pt-2 flex items-center justify-end">
           <div ref={menuRef} className="relative" onClick={(e) => e.preventDefault()}>
             <button
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen((o) => !o); setConfirming(false); }}
@@ -625,7 +585,7 @@ function CardMenu({ id, title, previewImage, duration, onDeleted }: {
               </svg>
             </button>
             {open && (
-              <div className="absolute bottom-full left-0 mb-1 w-40 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50">
+              <div className="absolute bottom-full right-0 mb-1 w-40 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50">
                 <Link
                   href={`/meetings/${id}`}
                   className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"

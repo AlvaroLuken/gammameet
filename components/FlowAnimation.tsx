@@ -89,7 +89,7 @@ export function FlowAnimation() {
   }, []);
 
   return (
-    <div className="w-full overflow-x-auto pb-2">
+    <div className="w-full overflow-x-auto overflow-y-visible py-6">
       <div className="flex items-center gap-0 min-w-max mx-auto w-fit">
         {STEPS.map((step, i) => (
           <div key={step.label} className="flex items-center">
