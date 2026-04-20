@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { MeetingTime } from "@/components/MeetingTime";
+import Image from "next/image";
 import { ActionsMenu } from "@/components/ActionsMenu";
 import { ExpandableText } from "@/components/ExpandableText";
 
@@ -98,12 +99,49 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
         {/* Deck viewer */}
         <main className="flex-1 md:overflow-y-auto bg-zinc-100 dark:bg-zinc-900 p-4">
           {meeting.export_url ? (
-            <embed
-              src={`${meeting.export_url}#toolbar=0&navpanes=0&scrollbar=0&statusbar=0`}
-              type="application/pdf"
-              className="w-full rounded-xl"
-              style={{ height: "min(calc(100vh - 120px), 80vw)" }}
-            />
+            <>
+              {/* Desktop: inline PDF embed */}
+              <embed
+                src={`${meeting.export_url}#toolbar=0&navpanes=0&scrollbar=0&statusbar=0`}
+                type="application/pdf"
+                className="hidden md:block w-full rounded-xl"
+                style={{ height: "min(calc(100vh - 120px), 80vw)" }}
+              />
+              {/* Mobile: tap-to-open preview (PDF <embed> can't scroll pages on iOS Safari) */}
+              <a
+                href={meeting.export_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="md:hidden block relative rounded-xl overflow-hidden bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 shadow-lg"
+              >
+                {meeting.preview_image ? (
+                  <div className="relative aspect-video">
+                    <Image
+                      src={meeting.preview_image}
+                      alt={meeting.title}
+                      fill
+                      sizes="100vw"
+                      className="object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="aspect-video flex items-center justify-center bg-zinc-100 dark:bg-zinc-800">
+                    <span className="text-4xl opacity-20">✦</span>
+                  </div>
+                )}
+                <div className="p-4 flex flex-col gap-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-violet-600 dark:text-violet-400">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+                    </svg>
+                    Open full deck
+                  </div>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    The deck opens in your browser so you can swipe through every slide.
+                  </p>
+                </div>
+              </a>
+            </>
           ) : meeting.gamma_url ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center space-y-4">
