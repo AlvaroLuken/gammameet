@@ -15,6 +15,7 @@ interface Meeting {
   preview_image: string | null;
   recall_bot_id: string | null;
   transcript_error: boolean | null;
+  bot_status: string | null;
   meeting_invites?: { email: string }[];
 }
 
@@ -163,31 +164,56 @@ export default function DashboardClient({ user }: { user: User }) {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [sidebarOpen]);
 
-  // Classify each meeting
+  // Classify each meeting.
+  // Truth source: bot_status (updated by Recall webhooks). Time-based checks are fallbacks.
   const now = Date.now();
   const classified = meetings.map((m) => {
     const startMs = new Date(m.start_time).getTime();
     const endMs = m.end_time ? new Date(m.end_time).getTime() : startMs + 10 * 60 * 1000;
-    const isUpcoming = startMs > now;
-    const isInProgress = !m.gamma_url && !isUpcoming && now < endMs;
-    // Real transcripts come back within ~2 min of meeting end.
-    // Generating window = 10 min after end. After that, the bot likely never captured anything.
-    const generatingCutoff = endMs + 10 * 60 * 1000;
-    const staleCutoff = endMs + 90 * 60 * 1000;
-    const isGenerating = !m.gamma_url && !isInProgress && !isUpcoming && now <= generatingCutoff;
-    const isWaiting = !m.gamma_url && !isInProgress && !isUpcoming && now > generatingCutoff && now <= staleCutoff;
-    const isStale = !m.gamma_url && !isInProgress && !isUpcoming && now > staleCutoff;
-    const isFailed = !!m.transcript_error || isStale;
-    const isProcessing = isGenerating || isWaiting;
+    const status = m.bot_status ?? "scheduled";
+
     const isReady = !!m.gamma_url;
-    return { ...m, _upcoming: isUpcoming, _inProgress: isInProgress, _generating: isGenerating, _waiting: isWaiting, _processing: isProcessing, _failed: isFailed, _ready: isReady };
+    const botFailed = status === "failed" || !!m.transcript_error;
+
+    // Bot confirmed active
+    const isInProgress = !isReady && status === "recording";
+    // Bot confirmed ended, transcript processing
+    const isGenerating = !isReady && status === "ended";
+
+    // Bot hasn't reached "recording" yet
+    const botEverJoined = status === "recording" || status === "ended";
+
+    // Before meeting start, not yet joining
+    const isUpcoming = !isReady && !botFailed && !botEverJoined && startMs > now && status === "scheduled";
+
+    // Bot is en route (joining, in waiting room) before meeting or at its start
+    const isJoining = !isReady && !botFailed && status === "joining";
+
+    // After meeting end window passed + bot never joined → no-show
+    const noShowCutoff = endMs + 10 * 60 * 1000;
+    const isNoShow = !isReady && !botFailed && !botEverJoined && !isJoining && now > noShowCutoff;
+
+    // Stale catch-all: very old meetings with no resolution
+    const isStale = !isReady && !botFailed && now > endMs + 90 * 60 * 1000;
+
+    const isFailed = botFailed || isStale || isNoShow;
+
+    return {
+      ...m,
+      _upcoming: isUpcoming,
+      _joining: isJoining,
+      _inProgress: isInProgress,
+      _generating: isGenerating,
+      _failed: isFailed,
+      _ready: isReady,
+    };
   });
 
   // Apply status filter first
   const statusFiltered = classified.filter((m) => {
     if (m._ready) return true;
-    if (m._upcoming && showUpcoming) return true;
-    if ((m._processing || m._inProgress) && showProcessing) return true;
+    if ((m._upcoming || m._joining) && showUpcoming) return true;
+    if ((m._inProgress || m._generating) && showProcessing) return true;
     if (m._failed && showFailed) return true;
     return false;
   });
@@ -471,15 +497,15 @@ export default function DashboardClient({ user }: { user: User }) {
   );
 }
 
-function MeetingCard({ meeting, onDeleted }: { meeting: Meeting & { _upcoming?: boolean; _inProgress?: boolean; _generating?: boolean; _waiting?: boolean; _processing?: boolean; _failed?: boolean }; onDeleted: (id: string) => void }) {
+function MeetingCard({ meeting, onDeleted }: { meeting: Meeting & { _upcoming?: boolean; _joining?: boolean; _inProgress?: boolean; _generating?: boolean; _failed?: boolean }; onDeleted: (id: string) => void }) {
   const duration = meeting.end_time ? durationMins(meeting.start_time, meeting.end_time) : null;
   const [deleting, setDeleting] = useState(false);
 
   const isUpcoming = !!meeting._upcoming;
+  const isJoining = !!meeting._joining;
   const isFailed = !!meeting._failed;
   const isInProgress = !!meeting._inProgress;
   const isGenerating = !!meeting._generating;
-  const isWaiting = !!meeting._waiting;
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -501,6 +527,31 @@ function MeetingCard({ meeting, onDeleted }: { meeting: Meeting & { _upcoming?: 
           <p className="text-zinc-500 dark:text-zinc-400 text-xs">{formatTime(meeting.start_time)}</p>
           <div className="mt-auto pt-2 flex items-center justify-between">
             <span className="text-xs text-zinc-400">Scheduled · Bot ready</span>
+            <button onClick={handleDelete} disabled={deleting} className="text-xs text-zinc-400 hover:text-red-400 transition-colors cursor-pointer disabled:opacity-50">
+              {deleting ? "Removing…" : "Remove"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Joining: bot en route (joining_call, in waiting room, in call but not yet recording)
+  if (isJoining) {
+    return (
+      <div className="flex flex-col bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden">
+        <div className="w-full aspect-video bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+          <div className="flex gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-[pulse_1.4s_ease-in-out_infinite]" />
+            <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-[pulse_1.4s_ease-in-out_0.2s_infinite]" />
+            <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-[pulse_1.4s_ease-in-out_0.4s_infinite]" />
+          </div>
+        </div>
+        <div className="flex flex-col gap-1.5 p-4 flex-1">
+          <p className="font-semibold text-zinc-900 dark:text-white leading-snug line-clamp-2">{meeting.title}</p>
+          <p className="text-zinc-500 dark:text-zinc-400 text-xs">{formatTime(meeting.start_time)}</p>
+          <div className="mt-auto pt-2 flex items-center justify-between">
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">Jim is joining — please admit</span>
             <button onClick={handleDelete} disabled={deleting} className="text-xs text-zinc-400 hover:text-red-400 transition-colors cursor-pointer disabled:opacity-50">
               {deleting ? "Removing…" : "Remove"}
             </button>
@@ -555,28 +606,6 @@ function MeetingCard({ meeting, onDeleted }: { meeting: Meeting & { _upcoming?: 
     );
   }
 
-  // Waiting: 10-90 min past end, no deck — bot probably didn't join or capture anything
-  if (isWaiting) {
-    return (
-      <div className="flex flex-col bg-white dark:bg-zinc-900 border border-amber-200 dark:border-amber-900/60 rounded-2xl overflow-hidden">
-        <div className="w-full aspect-video bg-amber-50 dark:bg-amber-950/20 flex items-center justify-center">
-          <svg className="w-7 h-7 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.333 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.25-8.25-3.285zm0 13.036h.008v.008H12v-.008z" />
-          </svg>
-        </div>
-        <div className="flex flex-col gap-1.5 p-4 flex-1">
-          <p className="font-semibold text-zinc-900 dark:text-white leading-snug line-clamp-2">{meeting.title}</p>
-          <p className="text-zinc-500 dark:text-zinc-400 text-xs">{formatTime(meeting.start_time)}</p>
-          <div className="mt-auto pt-2 flex items-center justify-between">
-            <span className="text-xs text-amber-600 dark:text-amber-400">No recording yet — bot may not have joined</span>
-            <button onClick={handleDelete} disabled={deleting} className="text-xs text-zinc-400 hover:text-red-400 transition-colors cursor-pointer disabled:opacity-50">
-              {deleting ? "Deleting…" : "Delete"}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // Failed: transcript failed or timed out
   if (isFailed) {

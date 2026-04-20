@@ -30,10 +30,51 @@ export async function POST(req: NextRequest) {
   if (event === "transcript.failed") {
     const botId = botObj?.id as string | undefined;
     if (botId) {
-      await supabase.from("meetings").update({ transcript_error: true }).eq("recall_bot_id", botId);
+      await supabase.from("meetings").update({ transcript_error: true, bot_status: "failed" }).eq("recall_bot_id", botId);
     }
     console.log("Recall transcript failed:", JSON.stringify(data));
     return NextResponse.json({ received: true, skipped: true });
+  }
+
+  // Bot state change events → update bot_status so UI reflects real-time state
+  // Forward-only state machine: scheduled → joining → recording → ended  (or → failed at any point)
+  const botStatusMap: Record<string, string> = {
+    "bot.joining_call": "joining",
+    "bot.in_waiting_room": "joining",
+    "bot.in_call_not_recording": "joining",
+    "bot.in_call_recording": "recording",
+    "bot.recording_permission_allowed": "recording",
+    "bot.call_ended": "ended",
+    "bot.done": "ended",
+    "bot.recording_permission_denied": "failed",
+    "bot.fatal": "failed",
+  };
+  const rank: Record<string, number> = { scheduled: 0, joining: 1, recording: 2, ended: 3, failed: 99 };
+
+  if (event && botStatusMap[event]) {
+    const botId = botObj?.id as string | undefined;
+    if (!botId) return NextResponse.json({ received: true, skipped: "no bot id" });
+
+    const { data: m } = await supabase
+      .from("meetings")
+      .select("id, bot_status")
+      .eq("recall_bot_id", botId)
+      .single();
+
+    if (m) {
+      const next = botStatusMap[event];
+      const current = (m.bot_status as string | null) ?? "scheduled";
+      const update: Record<string, unknown> = {};
+      // Only move forward (or to failed)
+      if (next === "failed" || (rank[next] ?? 0) > (rank[current] ?? 0)) {
+        update.bot_status = next;
+      }
+      if (next === "failed") update.transcript_error = true;
+      if (Object.keys(update).length > 0) {
+        await supabase.from("meetings").update(update).eq("id", m.id);
+      }
+    }
+    return NextResponse.json({ received: true, status: botStatusMap[event] });
   }
 
   if (event !== "transcript.done") {
