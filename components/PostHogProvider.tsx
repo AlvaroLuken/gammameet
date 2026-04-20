@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect } from "react";
 import posthog from "posthog-js";
+import * as Sentry from "@sentry/nextjs";
 import { usePathname, useSearchParams } from "next/navigation";
 
 function PostHogPageview() {
@@ -41,9 +42,13 @@ export function PostHogProvider({
   }, []);
 
   useEffect(() => {
-    if (!posthog.__loaded) return;
     if (userEmail) {
-      posthog.identify(userEmail, { email: userEmail, name: userName ?? undefined });
+      if (posthog.__loaded) {
+        posthog.identify(userEmail, { email: userEmail, name: userName ?? undefined });
+      }
+      Sentry.setUser({ email: userEmail, username: userName ?? undefined });
+    } else {
+      Sentry.setUser(null);
     }
   }, [userEmail, userName]);
 
