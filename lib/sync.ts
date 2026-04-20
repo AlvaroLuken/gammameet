@@ -51,9 +51,11 @@ export async function scheduleBotsForUser(userId: string, userEmail: string, acc
       meetingId = created.id;
       shouldCreateBot = true;
 
-      if (m.attendees.length > 0) {
+      // Always include the syncing user so they can see their own meeting.
+      const inviteEmails = [...new Set([userEmail, ...m.attendees].filter(Boolean))];
+      if (inviteEmails.length > 0) {
         await supabase.from("meeting_invites").upsert(
-          m.attendees.map((email) => ({ meeting_id: meetingId, email })),
+          inviteEmails.map((email) => ({ meeting_id: meetingId, email })),
           { onConflict: "meeting_id,email" }
         );
       }
