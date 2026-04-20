@@ -96,9 +96,10 @@ export async function scheduleBotsForUser(userId: string, userEmail: string, acc
 
       // Sync calendar changes (title/time moves)
       const titleChanged = existing.title !== m.title;
+      const prevEnd = existing.end_time ? new Date(existing.end_time).getTime() : null;
       const timeChanged =
         new Date(existing.start_time).getTime() !== new Date(m.start).getTime() ||
-        new Date(existing.end_time).getTime() !== new Date(m.end).getTime();
+        prevEnd !== new Date(m.end).getTime();
 
       if (titleChanged || timeChanged) {
         await supabase
