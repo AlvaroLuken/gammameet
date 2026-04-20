@@ -34,7 +34,14 @@ export async function sendRecapEmail({
         <a href="${gammaUrl}" style="display: inline-block; background: #7c3aed; color: #fff; font-weight: 600; padding: 12px 24px; border-radius: 8px; text-decoration: none; cursor: pointer;">
           View Deck in GammaMeet →
         </a>
-        <p style="margin-top: 24px; color: #52525b; font-size: 13px;">Powered by GammaMeet · Unsubscribe</p>
+        <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #27272a; text-align: center;">
+          <p style="color: #52525b; font-size: 12px; margin: 0 0 8px;">
+            Generated automatically by <a href="https://gamma-meet.com" style="color: #7c3aed; text-decoration: none;">GammaMeet</a>
+          </p>
+          <p style="color: #3f3f46; font-size: 12px; margin: 0;">
+            <a href="https://gamma-meet.com" style="color: #7c3aed; text-decoration: none;">Get your own meeting decks →</a>
+          </p>
+        </div>
       </div>
     `,
   });

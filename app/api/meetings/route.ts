@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getUserMeetings } from "@/lib/calendar";
 import { supabase } from "@/lib/supabase";
+import { scheduleBotsForUser } from "@/lib/sync";
 
 export async function GET() {
   const session = await auth();
@@ -11,12 +12,10 @@ export async function GET() {
 
   const accessToken = session.user.accessToken;
 
-  // Sync calendar in background — don't block the response
   if (accessToken) {
     syncCalendar(session.user.email, accessToken).catch(console.error);
   }
 
-  // Return only meetings with recaps ready
   const { data: invites } = await supabase
     .from("meeting_invites")
     .select("meeting_id")
@@ -27,19 +26,24 @@ export async function GET() {
 
   const { data: meetings } = await supabase
     .from("meetings")
-    .select("*")
+    .select("*, meeting_invites(email)")
     .in("id", ids)
-    .not("gamma_url", "is", null)
+    .not("recall_bot_id", "is", null)
     .order("start_time", { ascending: false });
 
-  return NextResponse.json(meetings ?? []);
+  // Show completed decks always; show pending/upcoming only within a 6-hour window
+  const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+  const visible = (meetings ?? []).filter(
+    (m) => m.gamma_url !== null || m.start_time > sixHoursAgo
+  );
+
+  return NextResponse.json(visible);
 }
 
 async function syncCalendar(userEmail: string, accessToken: string) {
-  const { getUserMeetings: fetchMeetings } = await import("@/lib/calendar");
-  const calendarMeetings = await fetchMeetings(accessToken);
-
-  for (const m of calendarMeetings) {
+  // Sync past meetings for record-keeping
+  const pastMeetings = await getUserMeetings(accessToken);
+  for (const m of pastMeetings) {
     const { data: existing } = await supabase
       .from("meetings")
       .select("id")
@@ -65,5 +69,16 @@ async function syncCalendar(userEmail: string, accessToken: string) {
         );
       }
     }
+  }
+
+  // Schedule bots for upcoming meetings
+  const { data: user } = await supabase
+    .from("users")
+    .select("id")
+    .eq("email", userEmail)
+    .single();
+
+  if (user) {
+    await scheduleBotsForUser(user.id, userEmail, accessToken);
   }
 }

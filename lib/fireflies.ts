@@ -9,7 +9,7 @@ export interface FirefliesTranscript {
   sentences: { text: string; speaker_name: string }[];
 }
 
-export async function fetchTranscript(transcriptId: string): Promise<FirefliesTranscript> {
+export async function fetchTranscript(transcriptId: string, apiKey: string): Promise<FirefliesTranscript> {
   const query = `
     query Transcript($transcriptId: String!) {
       transcript(id: $transcriptId) {
@@ -24,7 +24,7 @@ export async function fetchTranscript(transcriptId: string): Promise<FirefliesTr
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.FIREFLIES_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({ query, variables: { transcriptId } }),
   });
@@ -32,6 +32,55 @@ export async function fetchTranscript(transcriptId: string): Promise<FirefliesTr
   const json = await res.json();
   if (json.errors) throw new Error(`Fireflies error: ${JSON.stringify(json.errors)}`);
   return json.data.transcript;
+}
+
+export async function registerWebhook(accessToken: string, webhookUrl: string): Promise<string | null> {
+  const mutation = `
+    mutation CreateWebhook($webhook_url: String!) {
+      createWebhook(webhook_url: $webhook_url, event_type: "Transcription completed") {
+        id
+        webhook_url
+      }
+    }
+  `;
+
+  try {
+    const res = await fetch(FIREFLIES_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ query: mutation, variables: { webhook_url: webhookUrl } }),
+    });
+    const json = await res.json();
+    return json.data?.createWebhook?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function revokeWebhook(accessToken: string, webhookId: string): Promise<void> {
+  const mutation = `
+    mutation DeleteWebhook($webhook_id: String!) {
+      deleteWebhook(webhook_id: $webhook_id) {
+        success
+      }
+    }
+  `;
+
+  try {
+    await fetch(FIREFLIES_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ query: mutation, variables: { webhook_id: webhookId } }),
+    });
+  } catch {
+    // best-effort
+  }
 }
 
 export function buildPromptFromTranscript(t: FirefliesTranscript): string {

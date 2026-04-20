@@ -33,8 +33,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true, test: true });
   }
 
+  // Resolve which user's token to use
+  const uid = req.nextUrl.searchParams.get("uid");
+  let apiKey: string | null = null;
+
+  if (uid) {
+    const { data: user } = await supabase
+      .from("users")
+      .select("fireflies_access_token")
+      .eq("id", uid)
+      .single();
+    apiKey = user?.fireflies_access_token ?? null;
+  }
+
+  // Fall back to app-level key if no per-user token (legacy webhooks)
+  if (!apiKey) apiKey = process.env.FIREFLIES_API_KEY ?? null;
+
+  if (!apiKey) {
+    return NextResponse.json({ error: "No Fireflies token available" }, { status: 500 });
+  }
+
   try {
-    const transcript = await fetchTranscript(transcriptId);
+    const transcript = await fetchTranscript(transcriptId, apiKey);
     const content = buildPromptFromTranscript(transcript);
     const { gammaUrl, exportUrl, previewImage } = await generateGammaPage(transcript.title, content);
 

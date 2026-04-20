@@ -49,7 +49,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.expiresAt = account.expires_at;
 
         await supabase.from("users").upsert(
-          { email: token.email, name: token.name, image: token.picture },
+          {
+            email: token.email,
+            name: token.name,
+            image: token.picture,
+            google_refresh_token: account.refresh_token ?? null,
+          },
           { onConflict: "email" }
         );
         return token;

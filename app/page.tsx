@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { auth, signIn } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { FlowAnimation } from "@/components/FlowAnimation";
 
 export const metadata: Metadata = {
   title: "GammaMeet — Every meeting, beautifully decked",
@@ -101,8 +102,8 @@ export default async function Home() {
               },
               {
                 step: "02",
-                title: "Fireflies records your meeting",
-                desc: "Add fred@fireflies.ai to any meeting. Fireflies transcribes it when it ends.",
+                title: "GammaMeet Notetaker joins",
+                desc: "A bot joins your Google Meet automatically — just hit Admit when it knocks. For last-minute calls, add it manually.",
               },
               {
                 step: "03",
@@ -120,6 +121,83 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* Flow animation */}
+      <section className="border-t border-zinc-200 dark:border-zinc-800 py-20 px-8 bg-zinc-50 dark:bg-zinc-950">
+        <div className="max-w-4xl mx-auto space-y-10">
+          <div className="text-center space-y-2">
+            <p className="text-xs font-bold uppercase tracking-widest text-violet-500">The flow</p>
+            <h2 className="text-3xl font-bold">From meeting to deck in seconds.</h2>
+          </div>
+          <FlowAnimation />
+        </div>
+      </section>
+
+      {/* App preview */}
+      <section className="border-t border-zinc-200 dark:border-zinc-800 py-24 px-4 md:px-8">
+        <div className="max-w-7xl mx-auto space-y-10">
+          <div className="text-center space-y-3">
+            <p className="text-xs font-bold uppercase tracking-widest text-violet-500">See it in action</p>
+            <h2 className="text-3xl font-bold">This is what your next meeting becomes.</h2>
+            <p className="text-zinc-500 dark:text-zinc-400 text-sm max-w-md mx-auto">
+              A polished presentation — generated in seconds, emailed to every attendee.
+            </p>
+          </div>
+
+          {/* Replica of the in-app meeting detail view */}
+          <div className="rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-700 shadow-2xl bg-white dark:bg-zinc-950 flex flex-col">
+            {/* Header */}
+            <div className="border-b border-zinc-200 dark:border-zinc-800 px-5 py-3 flex items-center gap-4 bg-white dark:bg-zinc-950 shrink-0">
+              <span className="text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 px-3 py-1.5 rounded-full">← Back</span>
+              <span className="text-sm font-bold">Gamma<span className="text-violet-500">Meet</span></span>
+            </div>
+
+            {/* Body */}
+            <div className="flex flex-col md:flex-row" style={{ minHeight: 680 }}>
+              {/* Sidebar */}
+              <div className="w-full md:w-64 shrink-0 border-b md:border-b-0 md:border-r border-zinc-200 dark:border-zinc-800 p-5 flex flex-col gap-5 bg-white dark:bg-zinc-950">
+                <div>
+                  <p className="font-bold text-sm text-zinc-900 dark:text-white leading-snug">GammaMeet Demo Call</p>
+                  <p className="text-xs text-zinc-400 mt-1">Today · 10:00 AM · 18m</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">Attendees</p>
+                  {[
+                    { name: "Alex Chen", color: "bg-violet-500" },
+                    { name: "Maria Santos", color: "bg-blue-500" },
+                  ].map(({ name, color }) => (
+                    <div key={name} className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 px-3 py-2 rounded-lg">
+                      <span className={`w-6 h-6 shrink-0 rounded-full ${color} text-white text-xs flex items-center justify-center font-bold`}>{name[0]}</span>
+                      <span className="text-xs text-zinc-600 dark:text-zinc-400 truncate">{name}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">Summary</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">Walked through GammaMeet's core flow — bot joins, transcribes, and generates a Gamma deck automatically sent to all attendees.</p>
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">Action Items</p>
+                  <ul className="text-xs text-zinc-500 dark:text-zinc-400 space-y-1">
+                    <li>· Try GammaMeet on your next call</li>
+                    <li>· Share deck with your team</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Deck — real Gamma-generated PDF */}
+              <div className="flex-1 bg-zinc-100 dark:bg-zinc-900 p-3 flex items-start">
+                <embed
+                  src="https://assets.api.gamma.app/export/pdf/x88ri04n589zwla/a6351862baac166bfb4401d5674269c1/GammaMeet-Every-Meeting-Beautifully-Decked.pdf#toolbar=0&navpanes=0&scrollbar=0&statusbar=0"
+                  type="application/pdf"
+                  className="w-full rounded-xl"
+                  style={{ height: 650 }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Bottom CTA */}
       <section className="py-24 px-8 text-center space-y-6">
         <h2 className="text-4xl font-bold">Ready to recap smarter?</h2>
@@ -132,8 +210,10 @@ export default async function Home() {
         </form>
       </section>
 
-      <footer className="border-t border-zinc-200 dark:border-zinc-800 px-8 py-6 text-center text-zinc-400 text-sm">
-        © {new Date().getFullYear()} GammaMeet · Built with Gamma AI
+      <footer className="border-t border-zinc-200 dark:border-zinc-800 px-8 py-6 text-center text-zinc-400 text-sm space-x-4">
+        <span>© {new Date().getFullYear()} GammaMeet</span>
+        <a href="/privacy" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Privacy</a>
+        <a href="/terms" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Terms</a>
       </footer>
     </main>
   );

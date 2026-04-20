@@ -43,7 +43,8 @@ export async function POST(req: NextRequest) {
 }
 
 async function processTranscript(transcriptId: string) {
-  const transcript = await fetchTranscript(transcriptId);
+  const apiKey = process.env.FIREFLIES_API_KEY ?? "";
+  const transcript = await fetchTranscript(transcriptId, apiKey);
   const content = buildPromptFromTranscript(transcript);
   const { gammaUrl, exportUrl, previewImage } = await generateGammaPage(transcript.title, content);
 
