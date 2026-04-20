@@ -42,12 +42,14 @@ export default async function SharePage({ params }: { params: Promise<{ id: stri
             </div>
           )}
 
-          {meeting.action_items && (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Action Items</p>
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Action Items</p>
+            {meeting.action_items?.trim() ? (
               <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed whitespace-pre-line">{meeting.action_items}</p>
-            </div>
-          )}
+            ) : (
+              <p className="text-sm text-zinc-400 dark:text-zinc-500 italic">No action items detected in this meeting.</p>
+            )}
+          </div>
 
           <div className="mt-auto pt-4 border-t border-zinc-100 dark:border-zinc-800 space-y-3">
             <p className="text-xs text-zinc-400 dark:text-zinc-500">Generated automatically by GammaMeet</p>
