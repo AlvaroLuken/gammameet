@@ -123,37 +123,61 @@ export async function getBotMetadata(botId: string): Promise<Record<string, stri
   return data.metadata ?? {};
 }
 
-export function extractSummaryAndActions(segments: RecallTranscriptSegment[]): {
+import Anthropic from "@anthropic-ai/sdk";
+
+function transcriptToText(segments: RecallTranscriptSegment[]): string {
+  return segments
+    .map((s) => {
+      const name = s.speaker ?? s.participant?.name ?? "Unknown";
+      const text = s.words.map((w) => w.text).join(" ").trim();
+      return text ? `${name}: ${text}` : "";
+    })
+    .filter(Boolean)
+    .join("\n");
+}
+
+export async function generateSummaryAndActions(segments: RecallTranscriptSegment[]): Promise<{
   summary: string;
   actionItems: string;
-} {
-  const actionPattern = /\b(i'll|we'll|i will|we will|going to|need to|let's|let us|should|make sure|follow.?up|action item|by (monday|tuesday|wednesday|thursday|friday|next week|end of (day|week)))\b/i;
-
-  const allText = segments
-    .map((s) => s.words.map((w) => w.text).join(" ").trim())
-    .filter((t) => t.split(" ").length >= 4);
-
-  const actions: string[] = [];
-  const summaryParts: string[] = [];
-
-  for (const block of allText) {
-    const sentences = block.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter((s) => s.length > 15);
-    for (const sentence of sentences) {
-      if (actionPattern.test(sentence) && actions.length < 8) {
-        actions.push("· " + sentence);
-      }
-    }
-    summaryParts.push(block);
+}> {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.warn("ANTHROPIC_API_KEY not set, skipping LLM summary");
+    return { summary: "", actionItems: "" };
   }
 
-  const fullText = summaryParts.join(" ");
-  const words = fullText.split(" ");
-  const summary = words.slice(0, 80).join(" ") + (words.length > 80 ? "…" : "");
+  const text = transcriptToText(segments);
+  if (!text.trim()) return { summary: "", actionItems: "" };
 
-  return {
-    summary: summary.trim(),
-    actionItems: [...new Set(actions)].join("\n"),
-  };
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+  const res = await client.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 600,
+    system:
+      "You summarize meeting transcripts for a post-meeting recap. Return strict JSON only — no prose, no markdown. Schema: {\"summary\": string (2-4 concise sentences covering what the meeting was about and the key outcomes — not a retelling), \"actionItems\": string[] (each one a specific committed task with the owner if mentioned; empty array if none were detected — do not invent)}.",
+    messages: [
+      {
+        role: "user",
+        content: `Meeting transcript:\n\n${text}`,
+      },
+    ],
+  });
+
+  const content = res.content[0];
+  if (content.type !== "text") return { summary: "", actionItems: "" };
+
+  try {
+    const match = content.text.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(match ? match[0] : content.text);
+    const actions: string[] = Array.isArray(parsed.actionItems) ? parsed.actionItems : [];
+    return {
+      summary: String(parsed.summary ?? "").trim(),
+      actionItems: actions.map((a) => "· " + a).join("\n"),
+    };
+  } catch (err) {
+    console.error("Failed to parse Claude summary response:", err, content.text);
+    return { summary: "", actionItems: "" };
+  }
 }
 
 export function buildPromptFromRecallTranscript(

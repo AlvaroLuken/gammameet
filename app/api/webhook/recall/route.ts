@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { getBotData, getBotMetadata, buildPromptFromRecallTranscript, inferTitleFromSegments, extractSummaryAndActions } from "@/lib/recall";
+import { getBotData, getBotMetadata, buildPromptFromRecallTranscript, inferTitleFromSegments, generateSummaryAndActions } from "@/lib/recall";
 import { generateGammaPage } from "@/lib/gamma";
 import { sendRecapEmail } from "@/lib/email";
 
@@ -109,8 +109,13 @@ async function processMeeting(
     }
 
     const content = buildPromptFromRecallTranscript(title, meeting.start_time, participantNames, segments);
-    const { summary, actionItems } = extractSummaryAndActions(segments);
-    const { gammaUrl, exportUrl, previewImage } = await generateGammaPage(title, content);
+    const [{ summary, actionItems }, { gammaUrl, exportUrl, previewImage }] = await Promise.all([
+      generateSummaryAndActions(segments).catch((err) => {
+        console.error("Claude summary failed:", err);
+        return { summary: "", actionItems: "" };
+      }),
+      generateGammaPage(title, content),
+    ]);
 
     // Critical update — must succeed
     const { error: updateErr } = await supabase
