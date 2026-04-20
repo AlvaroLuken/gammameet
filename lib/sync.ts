@@ -25,11 +25,43 @@ export async function scheduleBotsForUser(userId: string, userEmail: string, acc
   const withLinks = upcoming.filter((m) => m.meetLink);
 
   for (const m of withLinks) {
-    const { data: existing } = await supabase
+    // First try by calendar_event_id. If not found, fall back to meet_link
+    // within a reasonable window — catches meetings created via /add-bot
+    // for the same physical call, preventing duplicate bots.
+    let existing: {
+      id: string;
+      recall_bot_id: string | null;
+      start_time: string;
+      end_time: string | null;
+      title: string;
+      bot_status: string | null;
+      calendar_event_id?: string | null;
+    } | null = null;
+
+    const { data: byEventId } = await supabase
       .from("meetings")
-      .select("id, recall_bot_id, start_time, end_time, title, bot_status")
+      .select("id, recall_bot_id, start_time, end_time, title, bot_status, calendar_event_id")
       .eq("calendar_event_id", m.id)
-      .single();
+      .maybeSingle();
+    existing = byEventId;
+
+    if (!existing) {
+      const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
+      const { data: byLink } = await supabase
+        .from("meetings")
+        .select("id, recall_bot_id, start_time, end_time, title, bot_status, calendar_event_id")
+        .eq("meet_link", m.meetLink)
+        .gte("start_time", fourHoursAgo)
+        .is("calendar_event_id", null)
+        .order("start_time", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      existing = byLink;
+      if (existing) {
+        // Claim this ad-hoc meeting as the calendar one
+        await supabase.from("meetings").update({ calendar_event_id: m.id }).eq("id", existing.id);
+      }
+    }
 
     let meetingId: string;
     let shouldCreateBot = false;

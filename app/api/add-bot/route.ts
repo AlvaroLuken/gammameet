@@ -21,19 +21,44 @@ export async function POST(req: NextRequest) {
     { onConflict: "email" }
   );
 
-  // Create meeting record
-  const { data: meeting } = await supabase
+  // Dedup: if a meeting for this meet_link already has an active/scheduled bot
+  // within a 4-hour window, reuse it — don't create a second bot.
+  const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
+  const { data: existing } = await supabase
     .from("meetings")
-    .insert({
-      title: title || "Ad-hoc Meeting",
-      start_time: new Date().toISOString(),
-      meet_link: meetingUrl,
-    })
-    .select()
-    .single();
+    .select("id, recall_bot_id, bot_status, gamma_url")
+    .eq("meet_link", meetingUrl)
+    .gte("start_time", fourHoursAgo)
+    .order("start_time", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  if (!meeting) {
-    return NextResponse.json({ error: "Failed to create meeting" }, { status: 500 });
+  if (existing?.recall_bot_id && existing.bot_status !== "failed" && !existing.gamma_url) {
+    // Make sure the user is an invitee so they see it on the dashboard
+    await supabase.from("meeting_invites").upsert(
+      [{ meeting_id: existing.id, email: session.user.email }],
+      { onConflict: "meeting_id,email" }
+    );
+    return NextResponse.json({ ok: true, botId: existing.recall_bot_id, alreadyScheduled: true, meetingId: existing.id });
+  }
+
+  let meetingId: string;
+
+  if (existing && !existing.recall_bot_id) {
+    // Meeting exists (from calendar sync) but no bot yet — attach bot to it
+    meetingId = existing.id;
+  } else {
+    const { data: created } = await supabase
+      .from("meetings")
+      .insert({
+        title: title || "Ad-hoc Meeting",
+        start_time: new Date().toISOString(),
+        meet_link: meetingUrl,
+      })
+      .select()
+      .single();
+    if (!created) return NextResponse.json({ error: "Failed to create meeting" }, { status: 500 });
+    meetingId = created.id;
   }
 
   // Pull title + attendees from Google Calendar
@@ -42,21 +67,18 @@ export async function POST(req: NextRequest) {
     : { attendees: [], title: null };
 
   const resolvedTitle = title || calendarEvent.title || "Ad-hoc Meeting";
-  if (resolvedTitle !== meeting.title) {
-    await supabase.from("meetings").update({ title: resolvedTitle }).eq("id", meeting.id);
-  }
+  await supabase.from("meetings").update({ title: resolvedTitle }).eq("id", meetingId);
 
   const allEmails = [...new Set([session.user.email, ...calendarEvent.attendees])].filter(Boolean);
   await supabase.from("meeting_invites").upsert(
-    allEmails.map((email) => ({ meeting_id: meeting.id, email })),
+    allEmails.map((email) => ({ meeting_id: meetingId, email })),
     { onConflict: "meeting_id,email" }
   );
 
-  // Deploy bot immediately (no join_at — join ASAP)
   try {
-    const botId = await createBot({ meetingUrl, meetingId: meeting.id });
-    await supabase.from("meetings").update({ recall_bot_id: botId }).eq("id", meeting.id);
-    return NextResponse.json({ ok: true, botId });
+    const botId = await createBot({ meetingUrl, meetingId });
+    await supabase.from("meetings").update({ recall_bot_id: botId, bot_status: "scheduled" }).eq("id", meetingId);
+    return NextResponse.json({ ok: true, botId, meetingId });
   } catch (err) {
     return NextResponse.json({ error: `Recall error: ${String(err)}` }, { status: 500 });
   }
