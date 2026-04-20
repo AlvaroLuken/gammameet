@@ -66,6 +66,25 @@ function durationMins(start: string, end: string) {
   return mins > 0 && mins < 600 ? mins : null;
 }
 
+function dateTint(startTime: string): string | null {
+  const start = new Date(startTime);
+  const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const daysAgo = Math.round((today - startDay) / 86400000);
+  if (daysAgo <= 0) return null;
+  const palette = [
+    "linear-gradient(135deg, rgb(251,146,60), rgb(244,63,94))",       // amber → rose
+    "linear-gradient(135deg, rgb(52,211,153), rgb(34,211,238))",      // emerald → cyan
+    "linear-gradient(135deg, rgb(167,139,250), rgb(244,114,182))",    // violet → pink
+    "linear-gradient(135deg, rgb(96,165,250), rgb(139,92,246))",      // blue → violet
+    "linear-gradient(135deg, rgb(251,191,36), rgb(251,146,60))",      // yellow → amber
+    "linear-gradient(135deg, rgb(244,114,182), rgb(251,146,60))",     // pink → amber
+    "linear-gradient(135deg, rgb(34,211,238), rgb(167,139,250))",     // cyan → violet
+  ];
+  return palette[(daysAgo - 1) % palette.length];
+}
+
 async function fetchMeetings() {
   const r = await fetch("/api/meetings");
   return r.json() as Promise<Meeting[]>;
@@ -520,15 +539,16 @@ function MeetingCard({ meeting, onDeleted }: { meeting: Meeting & { _upcoming?: 
 
   // Ready: deck generated
   return (
-    <CardMenu id={meeting.id} title={meeting.title} previewImage={meeting.preview_image} duration={duration} onDeleted={onDeleted} />
+    <CardMenu id={meeting.id} title={meeting.title} previewImage={meeting.preview_image} duration={duration} tint={dateTint(meeting.start_time)} onDeleted={onDeleted} />
   );
 }
 
-function CardMenu({ id, title, previewImage, duration, onDeleted }: {
+function CardMenu({ id, title, previewImage, duration, tint, onDeleted }: {
   id: string;
   title: string;
   previewImage: string | null;
   duration: number | null;
+  tint: string | null;
   onDeleted: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -568,8 +588,14 @@ function CardMenu({ id, title, previewImage, duration, onDeleted }: {
             <span className="text-4xl opacity-20">✦</span>
           </div>
         )}
+        {tint && (
+          <div
+            className="absolute inset-0 pointer-events-none mix-blend-color opacity-70 group-hover:opacity-50 transition-opacity duration-300"
+            style={{ backgroundImage: tint }}
+          />
+        )}
         {duration && (
-          <span className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full">{duration}m</span>
+          <span className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full z-10">{duration}m</span>
         )}
       </div>
       <div className="flex flex-col gap-1.5 p-4 flex-1">
