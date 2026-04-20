@@ -112,10 +112,22 @@ async function processMeeting(
     const { summary, actionItems } = extractSummaryAndActions(segments);
     const { gammaUrl, exportUrl, previewImage } = await generateGammaPage(title, content);
 
-    await supabase
+    // Critical update — must succeed
+    const { error: updateErr } = await supabase
       .from("meetings")
-      .update({ gamma_url: gammaUrl, export_url: exportUrl, preview_image: previewImage, summary, action_items: actionItems })
+      .update({ gamma_url: gammaUrl, export_url: exportUrl, preview_image: previewImage })
       .eq("id", meeting.id);
+    if (updateErr) {
+      console.error("Critical DB update failed:", updateErr);
+      throw new Error(`DB update failed: ${updateErr.message}`);
+    }
+
+    // Optional update — summary/action_items may fail if columns missing
+    const { error: extraErr } = await supabase
+      .from("meetings")
+      .update({ summary, action_items: actionItems })
+      .eq("id", meeting.id);
+    if (extraErr) console.error("Summary/actions update failed (non-fatal):", extraErr);
 
     if (allEmails.length > 0) {
       const gammaMeetUrl = `${process.env.APP_URL ?? "https://gammameet.vercel.app"}/meetings/${meeting.id}`;
