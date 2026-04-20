@@ -57,6 +57,38 @@ export default async function Home() {
         <p className="text-zinc-400 text-sm">Connects to Google Calendar · No credit card required</p>
       </section>
 
+      {/* Insight strip */}
+      <section className="border-t border-zinc-200 dark:border-zinc-800 py-20 px-8">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-8">
+          {[
+            {
+              icon: "💡",
+              headline: "Unlock hidden insights",
+              body: "You never know what insights you can unlock from a deck full of organized visuals of the discussions that happened in your meeting.",
+            },
+            {
+              icon: "🚀",
+              headline: "Brainstorms with exponential impact",
+              body: "Creative brainstorms now have exponential impact — every idea is captured, structured, and shareable before the day is over.",
+            },
+            {
+              icon: "✦",
+              headline: "From call to clarity",
+              body: "Stop losing decisions in scattered notes. GammaMeet turns every conversation into a polished narrative your whole team can act on.",
+            },
+          ].map(({ icon, headline, body }) => (
+            <div
+              key={headline}
+              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 space-y-3"
+            >
+              <span className="text-3xl">{icon}</span>
+              <h3 className="text-lg font-bold">{headline}</h3>
+              <p className="text-zinc-500 dark:text-zinc-400 text-sm leading-relaxed">{body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* App preview */}
       <section className="border-t border-zinc-200 dark:border-zinc-800 py-24 px-4 md:px-8">
         <div className="max-w-7xl mx-auto space-y-10">
@@ -163,38 +195,6 @@ export default async function Home() {
             <h2 className="text-3xl font-bold">From meeting to deck in seconds.</h2>
           </div>
           <FlowAnimation />
-        </div>
-      </section>
-
-      {/* Insight strip */}
-      <section className="border-t border-zinc-200 dark:border-zinc-800 py-20 px-8">
-        <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-8">
-          {[
-            {
-              icon: "💡",
-              headline: "Unlock hidden insights",
-              body: "You never know what insights you can unlock from a deck full of organized visuals of the discussions that happened in your meeting.",
-            },
-            {
-              icon: "🚀",
-              headline: "Brainstorms with exponential impact",
-              body: "Creative brainstorms now have exponential impact — every idea is captured, structured, and shareable before the day is over.",
-            },
-            {
-              icon: "✦",
-              headline: "From call to clarity",
-              body: "Stop losing decisions in scattered notes. GammaMeet turns every conversation into a polished narrative your whole team can act on.",
-            },
-          ].map(({ icon, headline, body }) => (
-            <div
-              key={headline}
-              className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 space-y-3"
-            >
-              <span className="text-3xl">{icon}</span>
-              <h3 className="text-lg font-bold">{headline}</h3>
-              <p className="text-zinc-500 dark:text-zinc-400 text-sm leading-relaxed">{body}</p>
-            </div>
-          ))}
         </div>
       </section>
 
