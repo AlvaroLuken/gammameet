@@ -603,18 +603,17 @@ function CardMenu({ id, title, previewImage, duration, tint, onDeleted }: {
           <span className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full z-10">{duration}m</span>
         )}
       </div>
-      <div className="flex flex-col gap-1.5 p-4 flex-1">
-        <p className="font-semibold text-zinc-900 dark:text-white leading-snug line-clamp-2">{title}</p>
-        <div className="mt-auto pt-2 flex items-center justify-end">
-          <div ref={menuRef} className="relative" onClick={(e) => e.preventDefault()}>
-            <button
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen((o) => !o); setConfirming(false); }}
-              className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors cursor-pointer"
-            >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                <circle cx="5" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="19" cy="12" r="1.5" />
-              </svg>
-            </button>
+      <div className="flex items-start justify-between gap-2 p-3">
+        <p className="font-semibold text-zinc-900 dark:text-white leading-snug line-clamp-2 flex-1 min-w-0">{title}</p>
+        <div ref={menuRef} className="relative shrink-0" onClick={(e) => e.preventDefault()}>
+          <button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen((o) => !o); setConfirming(false); }}
+            className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors cursor-pointer"
+          >
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <circle cx="5" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="19" cy="12" r="1.5" />
+            </svg>
+          </button>
             {open && (
               <div className="absolute bottom-full right-0 mb-1 w-40 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50">
                 <Link
@@ -645,7 +644,6 @@ function CardMenu({ id, title, previewImage, duration, tint, onDeleted }: {
                 </div>
               </div>
             )}
-          </div>
         </div>
       </div>
     </Link>
