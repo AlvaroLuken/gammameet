@@ -167,19 +167,22 @@ export default function DashboardClient({ user }: { user: User }) {
   const now = Date.now();
   const classified = meetings.map((m) => {
     const startMs = new Date(m.start_time).getTime();
+    const endMs = m.end_time ? new Date(m.end_time).getTime() : startMs + 10 * 60 * 1000;
     const isUpcoming = startMs > now;
-    const isStale = !m.gamma_url && !isUpcoming && startMs < now - 90 * 60 * 1000;
+    const isInProgress = !m.gamma_url && !isUpcoming && now < endMs;
+    const staleCutoff = endMs + 90 * 60 * 1000;
+    const isStale = !m.gamma_url && !isInProgress && !isUpcoming && now > staleCutoff;
     const isFailed = !!m.transcript_error || isStale;
-    const isProcessing = !m.gamma_url && !isFailed && !isUpcoming;
+    const isProcessing = !m.gamma_url && !isFailed && !isUpcoming && !isInProgress;
     const isReady = !!m.gamma_url;
-    return { ...m, _upcoming: isUpcoming, _processing: isProcessing, _failed: isFailed, _ready: isReady };
+    return { ...m, _upcoming: isUpcoming, _inProgress: isInProgress, _processing: isProcessing, _failed: isFailed, _ready: isReady };
   });
 
   // Apply status filter first
   const statusFiltered = classified.filter((m) => {
     if (m._ready) return true;
     if (m._upcoming && showUpcoming) return true;
-    if (m._processing && showProcessing) return true;
+    if ((m._processing || m._inProgress) && showProcessing) return true;
     if (m._failed && showFailed) return true;
     return false;
   });
@@ -463,12 +466,13 @@ export default function DashboardClient({ user }: { user: User }) {
   );
 }
 
-function MeetingCard({ meeting, onDeleted }: { meeting: Meeting & { _upcoming?: boolean; _processing?: boolean; _failed?: boolean }; onDeleted: (id: string) => void }) {
+function MeetingCard({ meeting, onDeleted }: { meeting: Meeting & { _upcoming?: boolean; _inProgress?: boolean; _processing?: boolean; _failed?: boolean }; onDeleted: (id: string) => void }) {
   const duration = meeting.end_time ? durationMins(meeting.start_time, meeting.end_time) : null;
   const [deleting, setDeleting] = useState(false);
 
   const isUpcoming = !!meeting._upcoming;
   const isFailed = !!meeting._failed;
+  const isInProgress = !!meeting._inProgress;
   const isProcessing = !!meeting._processing;
 
   const handleDelete = async (e: React.MouseEvent) => {
@@ -491,6 +495,30 @@ function MeetingCard({ meeting, onDeleted }: { meeting: Meeting & { _upcoming?: 
           <p className="text-zinc-500 dark:text-zinc-400 text-xs">{formatTime(meeting.start_time)}</p>
           <div className="mt-auto pt-2 flex items-center justify-between">
             <span className="text-xs text-zinc-400">Scheduled · Bot ready</span>
+            <button onClick={handleDelete} disabled={deleting} className="text-xs text-zinc-400 hover:text-red-400 transition-colors cursor-pointer disabled:opacity-50">
+              {deleting ? "Removing…" : "Remove"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // In progress: meeting is currently happening
+  if (isInProgress) {
+    return (
+      <div className="flex flex-col bg-white dark:bg-zinc-900 border border-emerald-200 dark:border-emerald-900/60 rounded-2xl overflow-hidden">
+        <div className="w-full aspect-video bg-emerald-50 dark:bg-emerald-950/20 flex items-center justify-center">
+          <span className="relative flex items-center justify-center">
+            <span className="absolute w-3 h-3 rounded-full bg-emerald-500 animate-ping opacity-60" />
+            <span className="relative w-3 h-3 rounded-full bg-emerald-500" />
+          </span>
+        </div>
+        <div className="flex flex-col gap-1.5 p-4 flex-1">
+          <p className="font-semibold text-zinc-900 dark:text-white leading-snug line-clamp-2">{meeting.title}</p>
+          <p className="text-zinc-500 dark:text-zinc-400 text-xs">{formatTime(meeting.start_time)}</p>
+          <div className="mt-auto pt-2 flex items-center justify-between">
+            <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Meeting in progress</span>
             <button onClick={handleDelete} disabled={deleting} className="text-xs text-zinc-400 hover:text-red-400 transition-colors cursor-pointer disabled:opacity-50">
               {deleting ? "Removing…" : "Remove"}
             </button>
