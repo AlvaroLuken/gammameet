@@ -31,7 +31,9 @@ export async function scheduleBotsForUser(userId: string, userEmail: string, acc
   if (!process.env.RECALLAI_API_KEY) return;
 
   const upcoming = await getUpcomingMeetings(accessToken);
-  const withLinks = upcoming.filter((m) => m.meetLink);
+  // Only meetings with a Meet link that haven't already ended
+  const now = Date.now();
+  const withLinks = upcoming.filter((m) => m.meetLink && new Date(m.end).getTime() > now);
 
   for (const m of withLinks) {
     // First try by calendar_event_id. If not found, fall back to meet_link
