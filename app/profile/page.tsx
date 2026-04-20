@@ -157,8 +157,11 @@ export default async function ProfilePage() {
         <form action={handleSignOut}>
           <button
             type="submit"
-            className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-red-300 dark:hover:border-red-700 text-zinc-700 dark:text-zinc-300 hover:text-red-500 dark:hover:text-red-400 text-sm font-medium px-4 py-3 rounded-2xl transition-colors cursor-pointer text-left"
+            className="inline-flex items-center gap-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-100 text-sm font-semibold px-5 py-2.5 rounded-full transition-colors cursor-pointer"
           >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+            </svg>
             Sign out
           </button>
         </form>
