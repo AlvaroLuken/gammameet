@@ -60,7 +60,7 @@ const STEPS = [
   },
 ];
 
-export function FlowAnimation() {
+export function FlowAnimation({ orientation = "horizontal" }: { orientation?: "horizontal" | "vertical" }) {
   const [active, setActive] = useState(0);
   const [flowing, setFlowing] = useState<number[]>([]);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -69,7 +69,6 @@ export function FlowAnimation() {
     function advance() {
       setActive((prev) => {
         const next = (prev + 1) % STEPS.length;
-        // Animate connector before next step
         if (next > 0) {
           setFlowing((f) => [...f, next - 1]);
           setTimeout(() => {
@@ -79,8 +78,6 @@ export function FlowAnimation() {
         return next;
       });
     }
-
-    // Kick off loop: first step immediately, then every 1.4s
     setActive(0);
     timerRef.current = setInterval(advance, 1400);
     return () => {
@@ -88,12 +85,57 @@ export function FlowAnimation() {
     };
   }, []);
 
+  if (orientation === "vertical") {
+    return (
+      <div className="w-full py-2">
+        <div className="flex flex-col items-stretch gap-0 mx-auto w-full max-w-[260px]">
+          {STEPS.map((step, i) => (
+            <div key={step.label} className="flex flex-col items-stretch">
+              <div
+                className={`flex items-center gap-4 transition-all duration-500 ${
+                  active === i ? "scale-[1.03]" : "scale-100 opacity-55"
+                }`}
+              >
+                <div
+                  className={`w-14 h-14 shrink-0 rounded-2xl border-2 flex items-center justify-center transition-all duration-500 ${
+                    active === i
+                      ? `${step.bg} ${step.border} shadow-lg`
+                      : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                  }`}
+                >
+                  <span className={`transition-colors duration-500 ${active === i ? step.color : "text-zinc-400"}`}>
+                    {step.icon}
+                  </span>
+                </div>
+                <span
+                  className={`text-sm font-semibold transition-colors duration-500 ${
+                    active === i ? "text-zinc-900 dark:text-white" : "text-zinc-400 dark:text-zinc-600"
+                  }`}
+                >
+                  {step.label}
+                </span>
+              </div>
+              {i < STEPS.length - 1 && (
+                <div className="relative ml-[27px] w-0.5 h-6 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden shrink-0 my-1">
+                  <div
+                    className={`absolute inset-x-0 top-0 rounded-full bg-violet-500 transition-all duration-500 ${
+                      flowing.includes(i) ? "h-full" : active > i ? "h-full opacity-40" : "h-0"
+                    }`}
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full overflow-x-auto overflow-y-visible py-6">
       <div className="flex items-center gap-0 min-w-max mx-auto w-fit">
         {STEPS.map((step, i) => (
           <div key={step.label} className="flex items-center">
-            {/* Node */}
             <div
               className={`flex flex-col items-center gap-3 transition-all duration-500 ${
                 active === i ? "scale-110" : "scale-100 opacity-60"
@@ -119,7 +161,6 @@ export function FlowAnimation() {
               </span>
             </div>
 
-            {/* Connector */}
             {i < STEPS.length - 1 && (
               <div className="relative w-16 h-1 mx-1 mb-6 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden shrink-0">
                 <div
