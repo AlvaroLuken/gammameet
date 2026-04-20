@@ -42,6 +42,14 @@ export async function createBot({
     automatic_video_output: {
       in_call_recording: { kind: "jpeg", b64_data: getBotAvatarB64() },
     },
+    chat: {
+      on_bot_join: {
+        send_to: "everyone",
+        message:
+          "👋 Hi, I'm Jim from GammaMeet. I'll transcribe this call and email an AI-generated recap deck to all attendees when it ends. Learn more: https://www.gamma-meet.com/faq",
+        pin: true,
+      },
+    },
     metadata: { gammameet_meeting_id: meetingId },
   };
   if (joinAt) body.join_at = joinAt;
