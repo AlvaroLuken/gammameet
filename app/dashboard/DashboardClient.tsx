@@ -170,12 +170,17 @@ export default function DashboardClient({ user }: { user: User }) {
     const endMs = m.end_time ? new Date(m.end_time).getTime() : startMs + 10 * 60 * 1000;
     const isUpcoming = startMs > now;
     const isInProgress = !m.gamma_url && !isUpcoming && now < endMs;
+    // Real transcripts come back within ~2 min of meeting end.
+    // Generating window = 10 min after end. After that, the bot likely never captured anything.
+    const generatingCutoff = endMs + 10 * 60 * 1000;
     const staleCutoff = endMs + 90 * 60 * 1000;
+    const isGenerating = !m.gamma_url && !isInProgress && !isUpcoming && now <= generatingCutoff;
+    const isWaiting = !m.gamma_url && !isInProgress && !isUpcoming && now > generatingCutoff && now <= staleCutoff;
     const isStale = !m.gamma_url && !isInProgress && !isUpcoming && now > staleCutoff;
     const isFailed = !!m.transcript_error || isStale;
-    const isProcessing = !m.gamma_url && !isFailed && !isUpcoming && !isInProgress;
+    const isProcessing = isGenerating || isWaiting;
     const isReady = !!m.gamma_url;
-    return { ...m, _upcoming: isUpcoming, _inProgress: isInProgress, _processing: isProcessing, _failed: isFailed, _ready: isReady };
+    return { ...m, _upcoming: isUpcoming, _inProgress: isInProgress, _generating: isGenerating, _waiting: isWaiting, _processing: isProcessing, _failed: isFailed, _ready: isReady };
   });
 
   // Apply status filter first
@@ -466,14 +471,15 @@ export default function DashboardClient({ user }: { user: User }) {
   );
 }
 
-function MeetingCard({ meeting, onDeleted }: { meeting: Meeting & { _upcoming?: boolean; _inProgress?: boolean; _processing?: boolean; _failed?: boolean }; onDeleted: (id: string) => void }) {
+function MeetingCard({ meeting, onDeleted }: { meeting: Meeting & { _upcoming?: boolean; _inProgress?: boolean; _generating?: boolean; _waiting?: boolean; _processing?: boolean; _failed?: boolean }; onDeleted: (id: string) => void }) {
   const duration = meeting.end_time ? durationMins(meeting.start_time, meeting.end_time) : null;
   const [deleting, setDeleting] = useState(false);
 
   const isUpcoming = !!meeting._upcoming;
   const isFailed = !!meeting._failed;
   const isInProgress = !!meeting._inProgress;
-  const isProcessing = !!meeting._processing;
+  const isGenerating = !!meeting._generating;
+  const isWaiting = !!meeting._waiting;
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -528,8 +534,8 @@ function MeetingCard({ meeting, onDeleted }: { meeting: Meeting & { _upcoming?: 
     );
   }
 
-  // Processing: meeting ended, deck being generated
-  if (isProcessing) {
+  // Generating: meeting ended <10min ago, deck actively being generated
+  if (isGenerating) {
     return (
       <div className="flex flex-col bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden">
         <div className="w-full aspect-video bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
@@ -540,6 +546,29 @@ function MeetingCard({ meeting, onDeleted }: { meeting: Meeting & { _upcoming?: 
           <p className="text-zinc-500 dark:text-zinc-400 text-xs">{formatTime(meeting.start_time)}</p>
           <div className="mt-auto pt-2 flex items-center justify-between">
             <span className="text-xs text-violet-400">Generating deck…</span>
+            <button onClick={handleDelete} disabled={deleting} className="text-xs text-zinc-400 hover:text-red-400 transition-colors cursor-pointer disabled:opacity-50">
+              {deleting ? "Deleting…" : "Delete"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Waiting: 10-90 min past end, no deck — bot probably didn't join or capture anything
+  if (isWaiting) {
+    return (
+      <div className="flex flex-col bg-white dark:bg-zinc-900 border border-amber-200 dark:border-amber-900/60 rounded-2xl overflow-hidden">
+        <div className="w-full aspect-video bg-amber-50 dark:bg-amber-950/20 flex items-center justify-center">
+          <svg className="w-7 h-7 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.333 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.25-8.25-3.285zm0 13.036h.008v.008H12v-.008z" />
+          </svg>
+        </div>
+        <div className="flex flex-col gap-1.5 p-4 flex-1">
+          <p className="font-semibold text-zinc-900 dark:text-white leading-snug line-clamp-2">{meeting.title}</p>
+          <p className="text-zinc-500 dark:text-zinc-400 text-xs">{formatTime(meeting.start_time)}</p>
+          <div className="mt-auto pt-2 flex items-center justify-between">
+            <span className="text-xs text-amber-600 dark:text-amber-400">No recording yet — bot may not have joined</span>
             <button onClick={handleDelete} disabled={deleting} className="text-xs text-zinc-400 hover:text-red-400 transition-colors cursor-pointer disabled:opacity-50">
               {deleting ? "Deleting…" : "Delete"}
             </button>
