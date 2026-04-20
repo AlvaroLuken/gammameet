@@ -1,3 +1,6 @@
+import fs from "fs";
+import path from "path";
+
 const RECALL_BASE = `https://${process.env.RECALLAI_REGION ?? "us-west-2"}.recall.ai/api/v1`;
 
 function recallHeaders() {
@@ -5,6 +8,14 @@ function recallHeaders() {
     Authorization: `Token ${process.env.RECALLAI_API_KEY}`,
     "Content-Type": "application/json",
   };
+}
+
+let _botAvatarB64: string | null = null;
+function getBotAvatarB64(): string {
+  if (_botAvatarB64) return _botAvatarB64;
+  const p = path.join(process.cwd(), "public", "bot-avatar.jpg");
+  _botAvatarB64 = fs.readFileSync(p).toString("base64");
+  return _botAvatarB64;
 }
 
 export interface RecallTranscriptSegment {
@@ -26,8 +37,11 @@ export async function createBot({
 }): Promise<string> {
   const body: Record<string, unknown> = {
     meeting_url: meetingUrl,
-    bot_name: "GammaMeet Notetaker",
+    bot_name: "Jim from GammaMeet",
     recording_config: { transcript: { provider: { recallai_streaming: {} } } },
+    automatic_video_output: {
+      in_call_recording: { kind: "jpeg", b64_data: getBotAvatarB64() },
+    },
     metadata: { gammameet_meeting_id: meetingId },
   };
   if (joinAt) body.join_at = joinAt;
