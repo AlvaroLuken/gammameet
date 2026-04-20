@@ -1,23 +1,22 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
+import { useEffect } from "react";
 import posthog from "posthog-js";
 import * as Sentry from "@sentry/nextjs";
-import { usePathname, useSearchParams } from "next/navigation";
 
-function PostHogPageview() {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  useEffect(() => {
-    if (!pathname || !posthog.__loaded) return;
-    let url = window.origin + pathname;
-    const q = searchParams?.toString();
-    if (q) url += `?${q}`;
-    posthog.capture("$pageview", { $current_url: url });
-  }, [pathname, searchParams]);
-
-  return null;
+let initialized = false;
+function ensurePostHogInit() {
+  if (initialized) return;
+  const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+  if (!key) return;
+  posthog.init(key, {
+    api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
+    capture_pageview: "history_change",
+    capture_pageleave: true,
+    person_profiles: "identified_only",
+    defaults: "2025-05-24",
+  });
+  initialized = true;
 }
 
 export function PostHogProvider({
@@ -29,17 +28,8 @@ export function PostHogProvider({
   userEmail?: string | null;
   userName?: string | null;
 }) {
-  useEffect(() => {
-    const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
-    if (!key) return;
-    if (!posthog.__loaded) {
-      posthog.init(key, {
-        api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
-        capture_pageview: false,
-        person_profiles: "identified_only",
-      });
-    }
-  }, []);
+  // Init synchronously on first render (client-only module; safe in "use client")
+  if (typeof window !== "undefined") ensurePostHogInit();
 
   useEffect(() => {
     if (userEmail) {
@@ -48,16 +38,10 @@ export function PostHogProvider({
       }
       Sentry.setUser({ email: userEmail, username: userName ?? undefined });
     } else {
+      if (posthog.__loaded) posthog.reset();
       Sentry.setUser(null);
     }
   }, [userEmail, userName]);
 
-  return (
-    <>
-      <Suspense fallback={null}>
-        <PostHogPageview />
-      </Suspense>
-      {children}
-    </>
-  );
+  return <>{children}</>;
 }
