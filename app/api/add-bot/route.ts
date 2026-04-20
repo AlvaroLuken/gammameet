@@ -15,6 +15,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "meetingUrl is required" }, { status: 400 });
   }
 
+  // Rate limit: max 10 manual bot adds per user per hour.
+  // Count meetings linked to this user's invites within the last hour.
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const { count: recentCount } = await supabase
+    .from("meetings")
+    .select("id, meeting_invites!inner(email)", { count: "exact", head: true })
+    .eq("meeting_invites.email", session.user.email)
+    .not("recall_bot_id", "is", null)
+    .gte("created_at", oneHourAgo);
+  if ((recentCount ?? 0) >= 10) {
+    return NextResponse.json(
+      { error: "Rate limit reached: 10 manual bot adds per hour. Try again later." },
+      { status: 429 }
+    );
+  }
+
   // Ensure user exists in DB (may not be there if upsert failed during OAuth)
   await supabase.from("users").upsert(
     { email: session.user.email, name: session.user.name, image: session.user.image },

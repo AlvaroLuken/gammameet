@@ -169,7 +169,16 @@ export default async function ProfilePage() {
           <DeleteAccountButton />
         </div>
 
-        <div className="flex gap-4 text-xs text-zinc-400">
+        <div className="flex flex-wrap gap-4 text-xs text-zinc-400">
+          <a
+            href="https://www.al-luken.space/#contact"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-violet-500 transition-colors"
+          >
+            Send feedback
+          </a>
+          <Link href="/faq" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">FAQ</Link>
           <Link href="/privacy" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Privacy Policy</Link>
           <Link href="/terms" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Terms of Service</Link>
         </div>
