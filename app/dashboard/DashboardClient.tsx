@@ -116,7 +116,6 @@ export default function DashboardClient({ user }: { user: User }) {
   const [showUpcoming, setShowUpcoming] = useState(false);
   const [showProcessing, setShowProcessing] = useState(false);
   const [showFailed, setShowFailed] = useState(false);
-  const prevIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     fetch("/api/preferences")
@@ -130,19 +129,25 @@ export default function DashboardClient({ user }: { user: User }) {
   }, []);
 
   useEffect(() => {
+    const hash = (data: Meeting[]) =>
+      data.map((m) => `${m.id}:${m.gamma_url ?? ""}:${m.transcript_error ? "1" : "0"}`).join("|");
+    let prev = "";
+
+    const poll = async () => {
+      const data = await fetchMeetings();
+      const next = hash(data);
+      if (next !== prev) {
+        setMeetings(data);
+        prev = next;
+      }
+    };
+
     fetchMeetings().then((data) => {
       setMeetings(data);
-      prevIds.current = new Set(data.map((m) => m.id));
+      prev = hash(data);
       setLoading(false);
     });
-    const interval = setInterval(async () => {
-      const data = await fetchMeetings();
-      const newOnes = data.filter((m) => !prevIds.current.has(m.id));
-      if (newOnes.length > 0) {
-        setMeetings(data);
-        prevIds.current = new Set(data.map((m) => m.id));
-      }
-    }, 20000);
+    const interval = setInterval(poll, 15000);
     return () => clearInterval(interval);
   }, []);
 
