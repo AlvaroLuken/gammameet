@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { auth, signIn } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { FlowAnimation } from "@/components/FlowAnimation";
 
 export const metadata: Metadata = {
   title: "GammaMeet — Every meeting, beautifully decked",
@@ -37,48 +36,24 @@ export default async function Home() {
       </nav>
 
       {/* Hero */}
-      <section className="relative overflow-hidden">
-        {/* Ambient glow */}
-        <div aria-hidden className="absolute inset-0 pointer-events-none">
-          <div className="absolute left-1/2 top-0 -translate-x-1/2 w-[900px] h-[600px] rounded-full blur-3xl" style={{ background: "radial-gradient(ellipse at center, rgba(139,92,246,0.18) 0%, rgba(139,92,246,0.04) 40%, transparent 70%)" }} />
+      <section className="max-w-4xl mx-auto px-8 py-28 text-center space-y-8">
+        <div className="inline-flex items-center gap-2 bg-violet-100 dark:bg-violet-950 text-violet-600 dark:text-violet-400 text-sm font-semibold px-4 py-1.5 rounded-full">
+          ✦ Powered by Gamma AI
         </div>
-
-        <div className="relative max-w-7xl mx-auto px-8 py-24 md:py-32">
-          <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-12 lg:gap-20 items-center">
-            {/* Left: hero text */}
-            <div className="space-y-7 text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 bg-violet-100 dark:bg-violet-950 text-violet-600 dark:text-violet-400 text-sm font-semibold px-4 py-1.5 rounded-full">
-                ✦ Powered by Gamma AI
-              </div>
-              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-none">
-                Every meeting,<br />
-                <span className="text-violet-500">beautifully decked.</span>
-              </h1>
-              <p className="text-xl text-zinc-500 dark:text-zinc-400 max-w-xl mx-auto lg:mx-0">
-                GammaMeet turns your meeting recordings into stunning AI-generated presentation decks — automatically, the moment your meeting ends.
-              </p>
-              <div className="flex flex-col items-center lg:items-start gap-3 pt-2">
-                <form action={handleSignIn}>
-                  <button type="submit" className="inline-flex items-center gap-3 bg-white text-black font-semibold px-8 py-4 text-lg rounded-full hover:bg-zinc-100 transition-colors cursor-pointer shadow-xl shadow-violet-500/10">
-                    <GoogleIcon />
-                    Get started free
-                  </button>
-                </form>
-                <p className="text-zinc-400 text-sm">Connects to Google Calendar · No credit card required</p>
-              </div>
-            </div>
-
-            {/* Right: flow animation */}
-            <div className="relative">
-              <div className="relative rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white/60 dark:bg-zinc-900/40 backdrop-blur-sm px-6 py-8">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-zinc-50 dark:bg-black px-3">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-violet-500">Meeting → Deck</p>
-                </div>
-                <FlowAnimation orientation="vertical" />
-              </div>
-            </div>
-          </div>
-        </div>
+        <h1 className="text-6xl sm:text-7xl font-bold tracking-tight leading-none">
+          Every meeting,<br />
+          <span className="text-violet-500">beautifully decked.</span>
+        </h1>
+        <p className="text-xl text-zinc-500 dark:text-zinc-400 max-w-xl mx-auto">
+          GammaMeet turns your meeting recordings into stunning AI-generated presentation decks — automatically, the moment your meeting ends.
+        </p>
+        <form action={handleSignIn}>
+          <button type="submit" className="inline-flex items-center gap-3 bg-white text-black font-semibold px-8 py-4 text-lg rounded-full hover:bg-zinc-100 transition-colors cursor-pointer">
+            <GoogleIcon />
+            Get started free
+          </button>
+        </form>
+        <p className="text-zinc-400 text-sm">Connects to Google Calendar · No credit card required</p>
       </section>
 
       {/* Insight strip */}
