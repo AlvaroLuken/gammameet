@@ -169,15 +169,24 @@ export default async function ProfilePage() {
           <DeleteAccountButton />
         </div>
 
+        {/* Feedback */}
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 space-y-2">
+          <h2 className="font-semibold text-lg">Feedback</h2>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+            To submit feedback, go to the contact section of{" "}
+            <a
+              href="https://www.al-luken.space/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-violet-500 hover:text-violet-400 transition-colors font-medium"
+            >
+              al-luken.space ↗
+            </a>
+            .
+          </p>
+        </div>
+
         <div className="flex flex-wrap gap-4 text-xs text-zinc-400">
-          <a
-            href="https://www.al-luken.space/#contact"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-violet-500 transition-colors"
-          >
-            Send feedback
-          </a>
           <Link href="/faq" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">FAQ</Link>
           <Link href="/privacy" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Privacy Policy</Link>
           <Link href="/terms" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Terms of Service</Link>
