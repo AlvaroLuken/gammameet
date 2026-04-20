@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { getUpcomingMeetings } from "@/lib/calendar";
-import { createBot } from "@/lib/recall";
+import { createBot, deleteBot } from "@/lib/recall";
 
 export async function refreshGoogleToken(refreshToken: string): Promise<string> {
   const res = await fetch("https://oauth2.googleapis.com/token", {
@@ -27,11 +27,12 @@ export async function scheduleBotsForUser(userId: string, userEmail: string, acc
   for (const m of withLinks) {
     const { data: existing } = await supabase
       .from("meetings")
-      .select("id, recall_bot_id")
+      .select("id, recall_bot_id, start_time, end_time, title, bot_status")
       .eq("calendar_event_id", m.id)
       .single();
 
     let meetingId: string;
+    let shouldCreateBot = false;
 
     if (!existing) {
       const { data: created } = await supabase
@@ -48,6 +49,7 @@ export async function scheduleBotsForUser(userId: string, userEmail: string, acc
 
       if (!created) continue;
       meetingId = created.id;
+      shouldCreateBot = true;
 
       if (m.attendees.length > 0) {
         await supabase.from("meeting_invites").upsert(
@@ -56,12 +58,49 @@ export async function scheduleBotsForUser(userId: string, userEmail: string, acc
         );
       }
     } else {
-      if (existing.recall_bot_id) continue; // already scheduled
       meetingId = existing.id;
+
+      // Sync calendar changes (title/time moves)
+      const titleChanged = existing.title !== m.title;
+      const timeChanged =
+        new Date(existing.start_time).getTime() !== new Date(m.start).getTime() ||
+        new Date(existing.end_time).getTime() !== new Date(m.end).getTime();
+
+      if (titleChanged || timeChanged) {
+        await supabase
+          .from("meetings")
+          .update({ title: m.title, start_time: m.start, end_time: m.end })
+          .eq("id", meetingId);
+      }
+
+      // Decide whether to reschedule the bot:
+      // - No bot yet → schedule one
+      // - Bot exists, hasn't joined yet, and start moved by > 2 min → cancel + reschedule
+      const botHasJoined = existing.bot_status === "recording" || existing.bot_status === "ended";
+      const botDidFail = existing.bot_status === "failed";
+      const startDriftMin =
+        Math.abs(new Date(existing.start_time).getTime() - new Date(m.start).getTime()) / 60000;
+
+      if (!existing.recall_bot_id) {
+        shouldCreateBot = true;
+      } else if (!botHasJoined && !botDidFail && startDriftMin > 2) {
+        // Reschedule: kill old bot, clear status, create new one
+        try {
+          await deleteBot(existing.recall_bot_id);
+        } catch (err) {
+          console.error(`Failed to delete stale bot ${existing.recall_bot_id}:`, err);
+        }
+        await supabase.from("meetings").update({ recall_bot_id: null, bot_status: null }).eq("id", meetingId);
+        shouldCreateBot = true;
+        console.log(`Rescheduled bot for moved meeting "${m.title}" (${startDriftMin.toFixed(1)}min drift)`);
+      } else {
+        continue; // bot already scheduled and times are fine, or bot already ran
+      }
     }
 
+    if (!shouldCreateBot) continue;
+
     try {
-      // If meeting starts in < 3 minutes, join immediately (no join_at)
       const minsUntilStart = (new Date(m.start).getTime() - Date.now()) / 60000;
       const joinAt =
         minsUntilStart > 3
@@ -69,7 +108,7 @@ export async function scheduleBotsForUser(userId: string, userEmail: string, acc
           : undefined;
 
       const botId = await createBot({ meetingUrl: m.meetLink!, joinAt, meetingId });
-      await supabase.from("meetings").update({ recall_bot_id: botId }).eq("id", meetingId);
+      await supabase.from("meetings").update({ recall_bot_id: botId, bot_status: "scheduled" }).eq("id", meetingId);
       console.log(`Bot ${botId} scheduled for "${m.title}" (user: ${userEmail})`);
     } catch (err) {
       console.error(`Failed to schedule bot for "${m.title}" (user: ${userEmail}):`, err);

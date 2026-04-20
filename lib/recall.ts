@@ -65,6 +65,16 @@ export async function createBot({
   return data.id as string;
 }
 
+export async function deleteBot(botId: string): Promise<void> {
+  const res = await fetch(`${RECALL_BASE}/bot/${botId}/`, {
+    method: "DELETE",
+    headers: recallHeaders(),
+  });
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`Recall deleteBot failed: ${await res.text()}`);
+  }
+}
+
 export interface BotData {
   segments: RecallTranscriptSegment[];
   meetingTitle: string | null;
