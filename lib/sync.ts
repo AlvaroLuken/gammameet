@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { getUpcomingMeetings } from "@/lib/calendar";
+import { getUpcomingMeetings, subscribeToCalendar, stopCalendarWatch } from "@/lib/calendar";
 import { createBot, deleteBot } from "@/lib/recall";
 
 export class RefreshTokenInvalidError extends Error {
@@ -27,8 +27,44 @@ export async function refreshGoogleToken(refreshToken: string): Promise<string> 
   return data.access_token as string;
 }
 
+export async function ensureCalendarSubscription(userId: string, accessToken: string) {
+  const { data: user } = await supabase
+    .from("users")
+    .select("cal_channel_id, cal_resource_id, cal_expiry")
+    .eq("id", userId)
+    .single();
+
+  // Already subscribed and not expiring within 24h → leave it alone
+  const expiresAt = user?.cal_expiry ? Number(user.cal_expiry) : 0;
+  if (user?.cal_channel_id && expiresAt > Date.now() + 24 * 60 * 60 * 1000) return;
+
+  // Stop the old channel if there is one
+  if (user?.cal_channel_id && user?.cal_resource_id) {
+    await stopCalendarWatch(accessToken, user.cal_channel_id, user.cal_resource_id).catch(() => {});
+  }
+
+  try {
+    const sub = await subscribeToCalendar(accessToken, userId);
+    await supabase
+      .from("users")
+      .update({
+        cal_channel_id: sub.channelId,
+        cal_resource_id: sub.resourceId,
+        cal_expiry: sub.expiry,
+      })
+      .eq("id", userId);
+    console.log(`Calendar push subscription renewed for user ${userId}, expires ${new Date(sub.expiry).toISOString()}`);
+  } catch (err) {
+    console.warn(`Failed to subscribe to calendar for user ${userId}:`, err);
+  }
+}
+
 export async function scheduleBotsForUser(userId: string, userEmail: string, accessToken: string) {
   if (!process.env.RECALLAI_API_KEY) return;
+
+  // Make sure we're subscribed to real-time calendar push notifications
+  // so new/moved events trigger a near-instant sync
+  await ensureCalendarSubscription(userId, accessToken);
 
   const upcoming = await getUpcomingMeetings(accessToken);
   // Only meetings with a Meet link that haven't already ended
