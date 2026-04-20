@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { MeetingTime } from "@/components/MeetingTime";
+import { ExpandableText } from "@/components/ExpandableText";
 
 export default async function SharePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -38,7 +39,7 @@ export default async function SharePage({ params }: { params: Promise<{ id: stri
           {meeting.summary && (
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Summary</p>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">{meeting.summary}</p>
+              <ExpandableText text={meeting.summary} lines={3} />
             </div>
           )}
 

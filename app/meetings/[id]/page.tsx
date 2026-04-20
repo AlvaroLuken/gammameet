@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { MeetingTime } from "@/components/MeetingTime";
 import { ActionsMenu } from "@/components/ActionsMenu";
+import { ExpandableText } from "@/components/ExpandableText";
 
 function letterAvatar(str: string) {
   const colors = ["bg-violet-500", "bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-rose-500", "bg-cyan-500", "bg-pink-500", "bg-orange-500"];
@@ -78,7 +79,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
           {meeting.summary && (
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Summary</p>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">{meeting.summary}</p>
+              <ExpandableText text={meeting.summary} lines={3} />
             </div>
           )}
 
