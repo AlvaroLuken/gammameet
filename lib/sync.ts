@@ -2,6 +2,10 @@ import { supabase } from "@/lib/supabase";
 import { getUpcomingMeetings } from "@/lib/calendar";
 import { createBot, deleteBot } from "@/lib/recall";
 
+export class RefreshTokenInvalidError extends Error {
+  constructor() { super("google_refresh_token_invalid"); }
+}
+
 export async function refreshGoogleToken(refreshToken: string): Promise<string> {
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -14,7 +18,12 @@ export async function refreshGoogleToken(refreshToken: string): Promise<string> 
     }),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(`Google token refresh failed: ${data.error}`);
+  if (!res.ok) {
+    // invalid_grant means the refresh token has been revoked / expired (common
+    // for unverified apps after 7 days). Signal upstream so we can prompt reauth.
+    if (data.error === "invalid_grant") throw new RefreshTokenInvalidError();
+    throw new Error(`Google token refresh failed: ${data.error}`);
+  }
   return data.access_token as string;
 }
 

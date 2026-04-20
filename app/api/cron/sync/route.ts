@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { refreshGoogleToken, scheduleBotsForUser } from "@/lib/sync";
+import { refreshGoogleToken, scheduleBotsForUser, RefreshTokenInvalidError } from "@/lib/sync";
 
 export const maxDuration = 300;
 
@@ -24,9 +24,16 @@ export async function GET(req: NextRequest) {
     try {
       const accessToken = await refreshGoogleToken(user.google_refresh_token);
       await scheduleBotsForUser(user.id, user.email, accessToken);
+      // Clear needs_reauth if it was set — token works again
+      await supabase.from("users").update({ needs_reauth: false }).eq("id", user.id);
       synced++;
     } catch (err) {
-      console.error(`Cron sync failed for ${user.email}:`, err);
+      if (err instanceof RefreshTokenInvalidError) {
+        await supabase.from("users").update({ needs_reauth: true, google_refresh_token: null }).eq("id", user.id);
+        console.warn(`Refresh token invalid for ${user.email} — flagged for reauth`);
+      } else {
+        console.error(`Cron sync failed for ${user.email}:`, err);
+      }
       failed++;
     }
   }
