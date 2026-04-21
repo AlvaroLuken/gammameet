@@ -86,9 +86,15 @@ function dateTint(startTime: string): string | null {
   return palette[(daysAgo - 1) % palette.length];
 }
 
-async function fetchMeetings() {
-  const r = await fetch("/api/meetings");
-  return r.json() as Promise<Meeting[]>;
+async function fetchMeetings(): Promise<Meeting[]> {
+  try {
+    const r = await fetch("/api/meetings");
+    if (!r.ok) return [];
+    const data = await r.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
 }
 
 function CopyButton({ text, label }: { text: string; label: string }) {
