@@ -7,13 +7,15 @@ interface Props {
   id: string;
   gammaUrl: string | null;
   exportUrl: string | null;
+  title?: string;
 }
 
-export function ActionsMenu({ id, gammaUrl, exportUrl }: Props) {
+export function ActionsMenu({ id, gammaUrl, exportUrl, title }: Props) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -38,6 +40,32 @@ export function ActionsMenu({ id, gammaUrl, exportUrl }: Props) {
     setDeleting(true);
     await fetch(`/api/meetings/${id}`, { method: "DELETE" });
     router.push("/dashboard");
+  };
+
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!exportUrl || downloading) return;
+    setDownloading(true);
+    try {
+      // Fetch through our proxy so the PDF is same-origin → browser respects
+      // the `download` attribute instead of navigating the page to the PDF.
+      const res = await fetch(`/api/deck-proxy?url=${encodeURIComponent(exportUrl)}`);
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = `${(title ?? "deck").replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      // Give the browser a tick to start the download, then revoke
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch (err) {
+      console.error("Download failed:", err);
+    } finally {
+      setDownloading(false);
+      setOpen(false);
+    }
   };
 
   return (
@@ -69,14 +97,14 @@ export function ActionsMenu({ id, gammaUrl, exportUrl }: Props) {
             </a>
           )}
           {exportUrl && (
-            <a
-              href={exportUrl}
-              download
-              className="flex items-center gap-3 px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-t border-zinc-100 dark:border-zinc-800"
+            <button
+              onClick={handleDownload}
+              disabled={downloading}
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-t border-zinc-100 dark:border-zinc-800 cursor-pointer disabled:opacity-50"
             >
               <span>↓</span>
-              Download PDF
-            </a>
+              {downloading ? "Downloading…" : "Download PDF"}
+            </button>
           )}
           <button
             onClick={copyLink}

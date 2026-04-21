@@ -99,7 +99,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
             )}
           </div>
 
-          <ActionsMenu id={id} gammaUrl={meeting.gamma_url} exportUrl={meeting.export_url} />
+          <ActionsMenu id={id} gammaUrl={meeting.gamma_url} exportUrl={meeting.export_url} title={meeting.title} />
         </aside>
 
         {/* Deck viewer */}
