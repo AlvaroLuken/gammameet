@@ -211,17 +211,16 @@ export default function DashboardClient({ user }: { user: User }) {
     const botFailed = status === "failed" || !!m.transcript_error;
     const hasBot = !!m.recall_bot_id;
 
-    // Time-window signals (used as fallbacks when Recall webhook events lag)
-    const inMeetingWindow = now >= startMs && now <= endMs;
-    const justEnded = now > endMs && now <= endMs + 10 * 60 * 1000;
+    // Bot-status is the only reliable signal for "generating" — a scheduled
+    // end time tells us nothing because meetings run over. We only switch to
+    // "generating" once Recall tells us the bot actually left the call.
+    const isGenerating = !isReady && !botFailed && hasBot && status === "ended";
 
-    // Bot confirmed live OR we're inside the scheduled window with a bot scheduled
+    // In progress: bot confirmed recording, OR we're past start_time with a
+    // bot scheduled and webhook hasn't caught up yet. Stays "in progress"
+    // indefinitely — never auto-flipped to "generating" by time alone.
     const isInProgress =
-      !isReady && !botFailed && hasBot && (status === "recording" || inMeetingWindow);
-
-    // Bot confirmed ended OR we just passed end_time with a bot that was supposed to record
-    const isGenerating =
-      !isReady && !botFailed && hasBot && !isInProgress && (status === "ended" || justEnded);
+      !isReady && !botFailed && hasBot && !isGenerating && (status === "recording" || now >= startMs);
 
     // Bot hasn't reached "recording" yet
     const botEverJoined = status === "recording" || status === "ended";
