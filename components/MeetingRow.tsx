@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
+import { dateTint } from "@/lib/dateTint";
 
 interface Meeting {
   id: string;
@@ -43,6 +44,7 @@ export function MeetingRow({ meeting, onDeleted }: { meeting: Classified; onDele
 
   const status = describeStatus(meeting);
   const clickable = meeting._ready;
+  const tint = meeting._ready ? dateTint(meeting.start_time) : null;
   const rowClass = `group flex items-center gap-4 bg-white dark:bg-zinc-900 border ${status.borderClass} rounded-xl px-4 py-3 transition-colors ${
     clickable ? "hover:border-violet-400 dark:hover:border-violet-600 cursor-pointer" : ""
   }`;
@@ -55,6 +57,12 @@ export function MeetingRow({ meeting, onDeleted }: { meeting: Classified; onDele
           <Image src={meeting.preview_image} alt={meeting.title} fill sizes="80px" className="object-cover" />
         ) : (
           <span className={status.iconClass}>{status.icon}</span>
+        )}
+        {tint && (
+          <div
+            className="absolute inset-0 pointer-events-none mix-blend-color opacity-70 group-hover:opacity-50 transition-opacity duration-300"
+            style={{ backgroundImage: tint }}
+          />
         )}
       </div>
 

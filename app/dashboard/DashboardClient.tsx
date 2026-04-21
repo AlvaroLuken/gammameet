@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { MeetingRow } from "@/components/MeetingRow";
+import { dateTint } from "@/lib/dateTint";
 
 interface Meeting {
   id: string;
@@ -76,25 +77,6 @@ function formatTime(iso: string) {
 function durationMins(start: string, end: string) {
   const mins = Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000);
   return mins > 0 && mins < 600 ? mins : null;
-}
-
-function dateTint(startTime: string): string | null {
-  const start = new Date(startTime);
-  const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const daysAgo = Math.round((today - startDay) / 86400000);
-  if (daysAgo <= 0) return null;
-  const palette = [
-    "linear-gradient(135deg, rgb(251,146,60), rgb(244,63,94))",       // amber → rose
-    "linear-gradient(135deg, rgb(52,211,153), rgb(34,211,238))",      // emerald → cyan
-    "linear-gradient(135deg, rgb(167,139,250), rgb(244,114,182))",    // violet → pink
-    "linear-gradient(135deg, rgb(96,165,250), rgb(139,92,246))",      // blue → violet
-    "linear-gradient(135deg, rgb(251,191,36), rgb(251,146,60))",      // yellow → amber
-    "linear-gradient(135deg, rgb(244,114,182), rgb(251,146,60))",     // pink → amber
-    "linear-gradient(135deg, rgb(34,211,238), rgb(167,139,250))",     // cyan → violet
-  ];
-  return palette[(daysAgo - 1) % palette.length];
 }
 
 async function fetchMeetings(): Promise<Meeting[]> {
