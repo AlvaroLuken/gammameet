@@ -59,7 +59,7 @@ export default async function BetaAccessPage({ searchParams }: { searchParams: P
                 <div className="min-w-0">
                   <p className="font-semibold text-base">I need beta access</p>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
-                    Use the contact form at al-luken.space. Include your Google email + mention GammaMeet. Usually approved within a few hours!
+                    Use the contact form at al-luken.space. Include your preferred email + mention GammaMeet. Usually approved within a few hours!
                   </p>
                 </div>
                 <span className="text-violet-500 text-xl group-hover:translate-x-0.5 transition-transform shrink-0">→</span>
