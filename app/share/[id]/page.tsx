@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { MeetingTime } from "@/components/MeetingTime";
 import { ExpandableText } from "@/components/ExpandableText";
+import { ActionItemsList } from "@/components/ActionItemsList";
 
 export default async function SharePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -47,7 +48,7 @@ export default async function SharePage({ params }: { params: Promise<{ id: stri
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Action Items</p>
             {meeting.action_items?.trim() ? (
-              <ExpandableText text={meeting.action_items} lines={4} />
+              <ActionItemsList text={meeting.action_items} />
             ) : (
               <p className="text-sm text-zinc-400 dark:text-zinc-500 italic">No action items detected in this meeting.</p>
             )}

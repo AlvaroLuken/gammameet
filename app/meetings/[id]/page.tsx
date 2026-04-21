@@ -7,6 +7,7 @@ import { MeetingTime } from "@/components/MeetingTime";
 import Image from "next/image";
 import { ActionsMenu } from "@/components/ActionsMenu";
 import { ExpandableText } from "@/components/ExpandableText";
+import { ActionItemsList } from "@/components/ActionItemsList";
 import { DeckWithRegenOverlay } from "@/components/DeckWithRegenOverlay";
 import { MeetingRegenProvider } from "@/components/MeetingRegenContext";
 
@@ -95,7 +96,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Action Items</p>
             {meeting.action_items?.trim() ? (
-              <ExpandableText text={meeting.action_items} lines={4} />
+              <ActionItemsList text={meeting.action_items} />
             ) : (
               <p className="text-sm text-zinc-400 dark:text-zinc-500 italic">No action items detected in this meeting.</p>
             )}
