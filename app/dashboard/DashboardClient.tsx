@@ -408,35 +408,6 @@ export default function DashboardClient({ user }: { user: User }) {
           </Link>
         </div>
         <div className="flex items-center gap-2">
-          {/* View mode toggle — hidden on mobile (grid is always fine there) */}
-          <div className="hidden md:inline-flex items-center bg-zinc-100 dark:bg-zinc-800 rounded-full p-0.5">
-            <button
-              onClick={() => changeViewMode("grid")}
-              className={`w-7 h-7 flex items-center justify-center rounded-full transition-colors cursor-pointer ${
-                viewMode === "grid"
-                  ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm"
-                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
-              }`}
-              title="Grid view"
-            >
-              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z" />
-              </svg>
-            </button>
-            <button
-              onClick={() => changeViewMode("list")}
-              className={`w-7 h-7 flex items-center justify-center rounded-full transition-colors cursor-pointer ${
-                viewMode === "list"
-                  ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm"
-                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
-              }`}
-              title="List view"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-          </div>
           <Link
             href="/add-bot"
             className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-full transition-colors cursor-pointer"
@@ -553,6 +524,37 @@ export default function DashboardClient({ user }: { user: User }) {
               )
             ) : (
               <>
+                {/* Grid/List toggle — aligned top-right above the deck grid */}
+                <div className="hidden md:flex justify-end -mt-2 mb-2">
+                  <div className="inline-flex items-center bg-zinc-100 dark:bg-zinc-800 rounded-full p-0.5">
+                    <button
+                      onClick={() => changeViewMode("grid")}
+                      className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors cursor-pointer ${
+                        viewMode === "grid"
+                          ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm"
+                          : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                      }`}
+                    >
+                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z" />
+                      </svg>
+                      Grid
+                    </button>
+                    <button
+                      onClick={() => changeViewMode("list")}
+                      className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors cursor-pointer ${
+                        viewMode === "list"
+                          ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm"
+                          : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                      }`}
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                      </svg>
+                      List
+                    </button>
+                  </div>
+                </div>
                 {groups.map(({ label, meetings: ms }) => (
                   <div key={label} className="space-y-4">
                     <div className="flex items-center gap-3">
