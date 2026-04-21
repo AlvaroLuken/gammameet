@@ -2,6 +2,16 @@ import { Resend } from "resend";
 import { supabase } from "./supabase";
 import { unsubscribeUrl } from "./unsubscribe";
 
+/**
+ * Return the From header with a friendly display name so inbox clients show
+ * "GammaMeet" instead of the local-part of the address ("hello").
+ */
+function fromAddress(): string {
+  const raw = process.env.EMAIL_FROM!;
+  // If the env var already includes a display name (e.g. "GammaMeet <x@y>"), use as-is
+  return raw.includes("<") ? raw : `GammaMeet <${raw}>`;
+}
+
 async function filterOptedOut(emails: string[]): Promise<string[]> {
   if (emails.length === 0) return [];
   const { data } = await supabase
@@ -113,10 +123,11 @@ export async function sendRecapEmail({
     filteredTo.map(async (recipient) => {
       const inner = renderRecapInner({ meetingTitle, formattedDate, gammaUrl, previewImage, unsubUrl: unsubscribeUrl(recipient) });
       await resend.emails.send({
-        from: process.env.EMAIL_FROM!,
+        from: fromAddress(),
         to: [recipient],
+        replyTo: process.env.EMAIL_FROM!.replace(/^.*<(.+)>.*$/, "$1"),
         subject: `Your deck is ready: ${meetingTitle}`,
-        html: wrap(inner, `Your GammaMeet deck for "${meetingTitle}" is ready.`),
+        html: wrap(inner, `Inside: the summary, action items, and a shareable link to your full deck.`),
         headers: {
           "List-Unsubscribe": `<${unsubscribeUrl(recipient)}>`,
           "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
@@ -231,9 +242,10 @@ export async function sendWelcomeEmail({ to, name }: { to: string; name: string 
   `;
 
   await resend.emails.send({
-    from: process.env.EMAIL_FROM!,
+    from: fromAddress(),
     to: [to],
+    replyTo: process.env.EMAIL_FROM!.replace(/^.*<(.+)>.*$/, "$1"),
     subject: "Welcome to GammaMeet — here's how it works",
-    html: wrap(inner, "Your GammaMeet account is ready. Here's what happens next."),
+    html: wrap(inner, "Your next Google Meet or Zoom call becomes a beautifully designed Gamma deck. No setup."),
   });
 }
