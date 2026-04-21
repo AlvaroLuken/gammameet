@@ -47,7 +47,7 @@ export default async function SharePage({ params }: { params: Promise<{ id: stri
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Action Items</p>
             {meeting.action_items?.trim() ? (
-              <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed whitespace-pre-line">{meeting.action_items}</p>
+              <ExpandableText text={meeting.action_items} lines={4} />
             ) : (
               <p className="text-sm text-zinc-400 dark:text-zinc-500 italic">No action items detected in this meeting.</p>
             )}

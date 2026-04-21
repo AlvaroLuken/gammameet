@@ -248,7 +248,7 @@ Return strict JSON with exactly these three fields, no prose outside the JSON:
 
 {
   "summary": "2-4 sentences. What was this meeting about, what got decided, and why does it matter? Not a retelling — a takeaway. Write for someone who wasn't there.",
-  "actionItems": ["Each committed task, one per string. Include the owner if mentioned (e.g. \\"Alice: Ship the dashboard mockup by Friday\\"). Empty array if nothing actionable. Never invent."],
+  "actionItems": ["Extract every next step, follow-up, task, and commitment from the meeting — not just formal assignments. Include loosely-committed items ('we should look into X', 'I'll probably reach out to Y') and implicit ones ('we need to figure out Z'). Include the owner if mentioned (e.g. \\"Alice: Ship the dashboard mockup by Friday\\"). If the owner is unclear, lead with the action alone. Aim for 3-10 items for a typical 15+ minute meeting. Only return empty if the conversation was truly non-actionable (e.g. social chat). Don't invent tasks that weren't discussed, but don't be stingy either."],
   "gammaBrief": "A structured markdown document Gamma will turn into a presentation. Use H1 for the title, H2 for major sections. Target 8 sections that make great slides. Use section structure that fits this meeting type — don't blindly follow a template if it doesn't fit. Default sections to include unless the type guidance above suggests otherwise: TL;DR, Key Decisions, Action Items, Core Themes (the meat — one sub-section per topic with insight and attributed quotes), Open Questions, Notable Quotes, Participants, Next Steps."
 }`;
 

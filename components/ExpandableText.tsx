@@ -17,7 +17,7 @@ export function ExpandableText({ text, lines = 3 }: { text: string; lines?: numb
     <div className="space-y-1.5">
       <p
         ref={ref}
-        className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed"
+        className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed whitespace-pre-line"
         style={expanded ? undefined : { display: "-webkit-box", WebkitLineClamp: lines, WebkitBoxOrient: "vertical", overflow: "hidden" }}
       >
         {text}
