@@ -42,6 +42,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   session: { strategy: "jwt" },
+  pages: {
+    // When Google OAuth blocks a user (e.g. not on the beta test-users list),
+    // NextAuth redirects here with `?error=...` — we show a friendly waitlist page
+    // instead of NextAuth's default ugly error screen.
+    error: "/beta-access",
+  },
   callbacks: {
     async jwt({ token, account }) {
       if (account) {
