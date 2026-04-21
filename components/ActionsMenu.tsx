@@ -16,6 +16,8 @@ export function ActionsMenu({ id, gammaUrl, exportUrl, title }: Props) {
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+  const [regenError, setRegenError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -40,6 +42,27 @@ export function ActionsMenu({ id, gammaUrl, exportUrl, title }: Props) {
     setDeleting(true);
     await fetch(`/api/meetings/${id}`, { method: "DELETE" });
     router.push("/dashboard");
+  };
+
+  const handleRegenerate = async () => {
+    if (regenerating) return;
+    setRegenError(null);
+    setRegenerating(true);
+    try {
+      const res = await fetch(`/api/meetings/${id}/regenerate`, { method: "POST" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setRegenError(body.error ?? "Regenerate failed");
+        setRegenerating(false);
+        return;
+      }
+      // Success — reload to show the fresh deck + summary/action items
+      router.refresh();
+      window.location.reload();
+    } catch {
+      setRegenError("Regenerate failed");
+      setRegenerating(false);
+    }
   };
 
   const handleDownload = async (e: React.MouseEvent) => {
@@ -113,6 +136,18 @@ export function ActionsMenu({ id, gammaUrl, exportUrl, title }: Props) {
             <span>{copied ? "✓" : "⎘"}</span>
             {copied ? "Link copied!" : "Copy share link"}
           </button>
+
+          <button
+            onClick={handleRegenerate}
+            disabled={regenerating}
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-t border-zinc-100 dark:border-zinc-800 cursor-pointer disabled:opacity-50"
+          >
+            <span className="text-violet-500">↻</span>
+            {regenerating ? "Regenerating…" : "Regenerate deck"}
+          </button>
+          {regenError && (
+            <p className="px-4 pb-2 text-xs text-red-500 border-t border-zinc-100 dark:border-zinc-800">{regenError}</p>
+          )}
 
           <div className="border-t border-zinc-100 dark:border-zinc-800">
             {confirming ? (
