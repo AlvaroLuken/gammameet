@@ -125,7 +125,6 @@ export async function sendRecapEmail({
       await resend.emails.send({
         from: fromAddress(),
         to: [recipient],
-        replyTo: process.env.EMAIL_FROM!.replace(/^.*<(.+)>.*$/, "$1"),
         subject: `Your deck is ready: ${meetingTitle}`,
         html: wrap(inner, `Inside: the summary, action items, and a shareable link to your full deck.`),
         headers: {
@@ -178,6 +177,9 @@ function renderRecapInner({ meetingTitle, formattedDate, gammaUrl, previewImage,
       <td style="padding:20px 32px 28px;background:#fafafa;border-top:1px solid #f4f4f5;">
         <p style="color:#9ca3af;font-size:12px;margin:0 0 6px;line-height:1.5;">
           Generated automatically by GammaMeet · <a href="https://www.gamma-meet.com" style="color:#7c3aed;text-decoration:none;">Get your own meeting decks</a>
+        </p>
+        <p style="color:#9ca3af;font-size:12px;margin:0 0 6px;line-height:1.5;">
+          Feedback? Use the contact form at <a href="https://www.al-luken.space/" style="color:#7c3aed;text-decoration:none;">al-luken.space</a>.
         </p>
         <p style="color:#9ca3af;font-size:11px;margin:0;line-height:1.5;">
           Received this because you attended the meeting. <a href="${unsubUrl}" style="color:#9ca3af;text-decoration:underline;">Unsubscribe</a>.
@@ -232,7 +234,7 @@ export async function sendWelcomeEmail({ to, name }: { to: string; name: string 
     <tr>
       <td style="padding:20px 32px 28px;background:#fafafa;border-top:1px solid #f4f4f5;">
         <p style="color:#9ca3af;font-size:12px;margin:0 0 6px;line-height:1.5;">
-          Questions? Check the <a href="https://www.gamma-meet.com/faq" style="color:#7c3aed;text-decoration:none;">FAQ</a> or reply to this email.
+          Questions? Check the <a href="https://www.gamma-meet.com/faq" style="color:#7c3aed;text-decoration:none;">FAQ</a> or send feedback via <a href="https://www.al-luken.space/" style="color:#7c3aed;text-decoration:none;">al-luken.space</a>.
         </p>
         <p style="color:#9ca3af;font-size:12px;margin:0;line-height:1.5;">
           GammaMeet · <a href="https://www.gamma-meet.com" style="color:#9ca3af;text-decoration:underline;">gamma-meet.com</a>
@@ -244,7 +246,6 @@ export async function sendWelcomeEmail({ to, name }: { to: string; name: string 
   await resend.emails.send({
     from: fromAddress(),
     to: [to],
-    replyTo: process.env.EMAIL_FROM!.replace(/^.*<(.+)>.*$/, "$1"),
     subject: "Welcome to GammaMeet — here's how it works",
     html: wrap(inner, "Your next Google Meet or Zoom call becomes a beautifully designed Gamma deck. No setup."),
   });
