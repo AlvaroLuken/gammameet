@@ -133,7 +133,6 @@ export default function DashboardClient({ user }: { user: User }) {
   const [showUpcoming, setShowUpcoming] = useState(false);
   const [showProcessing, setShowProcessing] = useState(false);
   const [showFailed, setShowFailed] = useState(false);
-  const [attendeesExpanded, setAttendeesExpanded] = useState(false);
 
   useEffect(() => {
     fetch("/api/preferences")
@@ -330,24 +329,7 @@ export default function DashboardClient({ user }: { user: User }) {
       {/* Attendee filter */}
       {allAttendees.length > 0 && (
         <div className="space-y-2">
-          <button
-            onClick={() => setAttendeesExpanded((o) => !o)}
-            className="flex items-center justify-between w-full px-1 cursor-pointer group"
-          >
-            <span className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-600 dark:group-hover:text-zinc-300 transition-colors">
-              Attendees {attendeeFilter.size > 0 && <span className="text-violet-500 normal-case">· {attendeeFilter.size}</span>}
-            </span>
-            <svg
-              className={`w-3 h-3 text-zinc-400 transition-transform ${attendeesExpanded ? "rotate-180" : ""}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2.5}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-          {attendeesExpanded && (
+          <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 px-1">Attendees</p>
           <div className="flex flex-col gap-1">
             {allAttendees.map((email) => {
               const { color: ac, letter: al } = letterAvatar(email);
@@ -375,7 +357,6 @@ export default function DashboardClient({ user }: { user: User }) {
               );
             })}
           </div>
-          )}
         </div>
       )}
 
