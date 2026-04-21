@@ -165,9 +165,17 @@ async function processMeeting(
       await supabase.from("meetings").update({ title }).eq("id", meeting.id);
     }
 
-    // Merge existing invites with Recall participant emails
+    // Merge existing invites with Recall participant emails, normalizing case
     const existingEmails = meeting.meeting_invites?.map((i: { email: string }) => i.email) ?? [];
-    const allEmails = [...new Set([...existingEmails, ...participantEmails])].filter(Boolean);
+    const seen = new Set<string>();
+    const allEmails: string[] = [];
+    for (const raw of [...existingEmails, ...participantEmails]) {
+      if (!raw) continue;
+      const key = raw.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      allEmails.push(raw);
+    }
 
     if (allEmails.length > 0) {
       await supabase.from("meeting_invites").upsert(
