@@ -205,7 +205,7 @@ export default async function Home() {
               {
                 step: "02",
                 title: "GammaMeet Notetaker joins",
-                desc: "A bot joins your Google Meet automatically — just hit Admit when it knocks. For last-minute calls, add it manually.",
+                desc: "Jim from GammaMeet joins your Google Meet calls automatically — just hit Admit when he knocks. For Zoom or last-minute calls, paste the link into Add bot.",
               },
               {
                 step: "03",

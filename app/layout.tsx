@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
   keywords: [
     "meeting notes", "AI meeting recap", "Gamma AI", "presentation deck",
-    "meeting bot", "Google Meet bot", "meeting transcription", "AI presentation",
+    "meeting bot", "Google Meet bot", "Zoom bot", "meeting transcription", "AI presentation",
     "automatic meeting summary", "action items", "meeting recording",
   ],
   authors: [{ name: "GammaMeet" }],

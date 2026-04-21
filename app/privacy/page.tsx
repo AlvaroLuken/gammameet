@@ -27,7 +27,7 @@ export default function PrivacyPage() {
           <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Information we collect</h2>
           <ul className="list-disc list-inside space-y-2">
             <li><strong className="text-zinc-700 dark:text-zinc-300">Google account info</strong> — your name, email address, and profile photo when you sign in.</li>
-            <li><strong className="text-zinc-700 dark:text-zinc-300">Google Calendar data</strong> — we read your calendar to find upcoming meetings with video links so we can schedule a recording bot. We only read event titles, times, attendees, and meet links.</li>
+            <li><strong className="text-zinc-700 dark:text-zinc-300">Google Calendar data</strong> — we read your calendar to find upcoming meetings with video links so we can schedule a recording bot. We only read event titles, times, attendees, and video conference links.</li>
             <li><strong className="text-zinc-700 dark:text-zinc-300">Meeting recordings and transcripts</strong> — audio is recorded and transcribed during meetings where GammaMeet Notetaker has been admitted. Transcripts are used solely to generate your presentation deck.</li>
             <li><strong className="text-zinc-700 dark:text-zinc-300">Meeting metadata</strong> — titles, dates, attendee email addresses.</li>
           </ul>

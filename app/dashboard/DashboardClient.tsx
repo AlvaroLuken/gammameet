@@ -468,7 +468,7 @@ export default function DashboardClient({ user }: { user: User }) {
                     <div className="flex-1">
                       <p className="text-sm font-semibold text-zinc-900 dark:text-white">Listening for your next meeting</p>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
-                        We're watching your Google Calendar. Any meeting with a Meet link will show up here the moment it's added — and a deck will generate automatically after it ends.
+                        We're watching your Google Calendar. Any meeting with a Google Meet link will show up here the moment it's added — and a deck will generate after it ends. Zoom calls? Paste the link into + Add bot.
                       </p>
                     </div>
                   </div>

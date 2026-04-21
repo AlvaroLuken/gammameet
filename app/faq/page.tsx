@@ -19,7 +19,7 @@ const SECTIONS = [
     items: [
       {
         q: "What is GammaMeet?",
-        a: "GammaMeet joins your Google Meet calls as a notetaker, transcribes the conversation, and automatically generates a polished Gamma AI presentation deck that lands in every attendee's inbox the moment the meeting ends.",
+        a: "GammaMeet joins your Google Meet or Zoom calls as a notetaker, transcribes the conversation, and automatically generates a polished Gamma AI presentation deck that lands in every attendee's inbox the moment the meeting ends.",
       },
       {
         q: "How do I get started?",
@@ -40,7 +40,7 @@ const SECTIONS = [
       },
       {
         q: "Can I use GammaMeet for a meeting I didn't schedule?",
-        a: "Yes. Click \"+ Add bot\" in the dashboard and paste any Google Meet link — GammaMeet will join within seconds, even for meetings that are already in progress.",
+        a: "Yes. Click \"+ Add bot\" in the dashboard and paste any Google Meet or Zoom link — GammaMeet will join within seconds, even for meetings that are already in progress.",
       },
       {
         q: "What happens if the bot can't join?",
@@ -103,7 +103,7 @@ const SECTIONS = [
     items: [
       {
         q: "Which meeting platforms do you support?",
-        a: "GammaMeet currently supports Google Meet. Zoom, Microsoft Teams, and Webex support is on the roadmap — if you need them, reach out.",
+        a: "GammaMeet supports Google Meet (auto-joined from your calendar) and Zoom (paste the link into + Add bot). Microsoft Teams and Webex are on the roadmap.",
       },
       {
         q: "What about meetings without a video link?",

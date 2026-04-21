@@ -192,7 +192,7 @@ export async function sendWelcomeEmail({ to, name }: { to: string; name: string 
         </h1>
 
         <p style="color:#374151;font-size:15px;margin:0 0 20px;line-height:1.6;">
-          ${greeting} from now on, every Google Meet on your calendar gets a beautifully-designed Gamma deck, emailed to all attendees right after the call. No setup, no notes.
+          ${greeting} from now on, every Google Meet on your calendar gets a beautifully-designed Gamma deck, emailed to all attendees right after the call. Works with Zoom too — just paste the link. No setup, no notes.
         </p>
 
         <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:12px;padding:20px 24px;margin:24px 0;">
@@ -200,8 +200,9 @@ export async function sendWelcomeEmail({ to, name }: { to: string; name: string 
             What happens next
           </p>
           <ol style="margin:0;padding-left:20px;color:#374151;font-size:14px;line-height:1.8;">
-            <li><strong>GammaMeet watches your calendar</strong> for meetings with a Meet link.</li>
+            <li><strong>GammaMeet watches your calendar</strong> for upcoming meetings with a Google Meet link.</li>
             <li><strong>Jim from GammaMeet</strong> joins each meeting 2 min before it starts — just admit him when he knocks.</li>
+            <li><strong>For Zoom or ad-hoc calls</strong>, paste the link at <a href="https://www.gamma-meet.com/add-bot" style="color:#7c3aed;text-decoration:none;">gamma-meet.com/add-bot</a> and Jim joins instantly.</li>
             <li><strong>A polished deck</strong> lands in everyone's inbox within minutes of the meeting ending.</li>
           </ol>
         </div>
