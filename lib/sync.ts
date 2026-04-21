@@ -114,7 +114,7 @@ export async function scheduleBotsForUser(userId: string, userEmail: string, acc
     let shouldCreateBot = false;
 
     if (!existing) {
-      const { data: created } = await supabase
+      const { data: created, error: insertErr } = await supabase
         .from("meetings")
         .insert({
           calendar_event_id: m.id,
@@ -126,9 +126,22 @@ export async function scheduleBotsForUser(userId: string, userEmail: string, acc
         .select()
         .single();
 
-      if (!created) continue;
-      meetingId = created.id;
-      shouldCreateBot = true;
+      // Race: another worker inserted the same calendar_event_id first. Re-fetch.
+      if (insertErr && insertErr.code === "23505") {
+        const { data: refetched } = await supabase
+          .from("meetings")
+          .select("id, recall_bot_id, start_time, end_time, title, bot_status, calendar_event_id")
+          .eq("calendar_event_id", m.id)
+          .maybeSingle();
+        if (!refetched) continue;
+        existing = refetched;
+        meetingId = refetched.id;
+        shouldCreateBot = !refetched.recall_bot_id;
+      } else {
+        if (!created) continue;
+        meetingId = created.id;
+        shouldCreateBot = true;
+      }
 
       // Always include the syncing user so they can see their own meeting.
       const inviteEmails = [...new Set([userEmail, ...m.attendees].filter(Boolean))];
@@ -182,6 +195,22 @@ export async function scheduleBotsForUser(userId: string, userEmail: string, acc
 
     if (!shouldCreateBot) continue;
 
+    // Atomic claim: mark bot_status="claiming" only if no bot exists yet.
+    // This prevents two parallel workers (cron + calendar webhook) from
+    // each spawning a bot for the same meeting.
+    const { data: claim } = await supabase
+      .from("meetings")
+      .update({ bot_status: "claiming" })
+      .eq("id", meetingId)
+      .is("recall_bot_id", null)
+      .select("id")
+      .maybeSingle();
+
+    if (!claim) {
+      console.log(`Bot creation skipped for "${m.title}" — already claimed by another worker`);
+      continue;
+    }
+
     try {
       const minsUntilStart = (new Date(m.start).getTime() - Date.now()) / 60000;
       const joinAt =
@@ -193,6 +222,8 @@ export async function scheduleBotsForUser(userId: string, userEmail: string, acc
       await supabase.from("meetings").update({ recall_bot_id: botId, bot_status: "scheduled" }).eq("id", meetingId);
       console.log(`Bot ${botId} scheduled for "${m.title}" (user: ${userEmail})`);
     } catch (err) {
+      // Release the claim on failure so a later run can retry
+      await supabase.from("meetings").update({ bot_status: null }).eq("id", meetingId);
       console.error(`Failed to schedule bot for "${m.title}" (user: ${userEmail}):`, err);
     }
   }

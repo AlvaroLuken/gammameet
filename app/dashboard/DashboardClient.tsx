@@ -199,8 +199,8 @@ export default function DashboardClient({ user }: { user: User }) {
     // Bot hasn't reached "recording" yet
     const botEverJoined = status === "recording" || status === "ended";
 
-    // Before meeting start, not yet joining
-    const isUpcoming = !isReady && !botFailed && !botEverJoined && startMs > now && status === "scheduled";
+    // Before meeting start, not yet joining (treat "claiming" same as scheduled — transient state during bot creation)
+    const isUpcoming = !isReady && !botFailed && !botEverJoined && startMs > now && (status === "scheduled" || status === "claiming");
 
     // Bot is en route (joining, in waiting room) before meeting or at its start
     const isJoining = !isReady && !botFailed && status === "joining";
