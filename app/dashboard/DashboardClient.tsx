@@ -159,8 +159,10 @@ export default function DashboardClient({ user }: { user: User }) {
   }, []);
 
   useEffect(() => {
+    // Include bot_status so live state transitions (recording → ended, etc.)
+    // trigger a re-render immediately.
     const hash = (data: Meeting[]) =>
-      data.map((m) => `${m.id}:${m.gamma_url ?? ""}:${m.transcript_error ? "1" : "0"}`).join("|");
+      data.map((m) => `${m.id}:${m.gamma_url ?? ""}:${m.transcript_error ? "1" : "0"}:${m.bot_status ?? ""}`).join("|");
     let prev = "";
 
     const poll = async () => {
@@ -169,6 +171,10 @@ export default function DashboardClient({ user }: { user: User }) {
       if (next !== prev) {
         setMeetings(data);
         prev = next;
+      } else {
+        // Force a re-render anyway so time-window-based classification (e.g.
+        // upcoming → in-progress at startMs) updates without a page reload.
+        setMeetings((prev) => [...prev]);
       }
     };
 
