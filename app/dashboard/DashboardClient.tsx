@@ -639,7 +639,7 @@ function MeetingCard({ meeting, onChange }: { meeting: Meeting & { _upcoming?: b
           <div className="mt-auto pt-2 flex items-center justify-between">
             <span className="text-xs text-zinc-400">Hidden</span>
             <button onClick={(e) => { e.preventDefault(); handleUnhide(); }} className="text-xs font-semibold text-violet-500 hover:text-violet-400 transition-colors cursor-pointer">
-              Unhide
+              Recover meeting
             </button>
           </div>
         </div>

@@ -39,6 +39,18 @@ export function MeetingRow({ meeting, onChange }: { meeting: Classified; onChang
     await fetch(`/api/meetings/${meeting.id}`, { method: "DELETE" });
     await onChange();
   };
+  const handleCancelBot = async () => {
+    await fetch(`/api/meetings/${meeting.id}/cancel-bot`, { method: "POST" });
+    await onChange();
+  };
+  const handleEnableBot = async () => {
+    await fetch(`/api/meetings/${meeting.id}/enable-bot`, { method: "POST" });
+    await onChange();
+  };
+  const handleUnhide = async () => {
+    await fetch(`/api/meetings/${meeting.id}/unhide`, { method: "POST" });
+    await onChange();
+  };
 
   const status = describeStatus(meeting);
   const clickable = !!meeting._ready;
@@ -72,8 +84,18 @@ export function MeetingRow({ meeting, onChange }: { meeting: Classified; onChang
         </p>
       </div>
 
-      {/* 3-dot menu — matches the grid card's menu (View Deck + Delete for ready, Delete for others) */}
-      <RowMenu meetingId={meeting.id} isReady={clickable} onDelete={handleDelete} />
+      {/* 3-dot menu with state-aware actions */}
+      <RowMenu
+        meetingId={meeting.id}
+        isReady={clickable}
+        isHidden={!!meeting._hidden}
+        isUpcoming={!!meeting._upcoming}
+        isBotDisabled={!!meeting._botDisabled}
+        onDelete={handleDelete}
+        onCancelBot={handleCancelBot}
+        onEnableBot={handleEnableBot}
+        onUnhide={handleUnhide}
+      />
     </>
   );
 
@@ -84,7 +106,27 @@ export function MeetingRow({ meeting, onChange }: { meeting: Classified; onChang
   );
 }
 
-function RowMenu({ meetingId, isReady, onDelete }: { meetingId: string; isReady: boolean; onDelete: () => Promise<void> }) {
+function RowMenu({
+  meetingId,
+  isReady,
+  isHidden,
+  isUpcoming,
+  isBotDisabled,
+  onDelete,
+  onCancelBot,
+  onEnableBot,
+  onUnhide,
+}: {
+  meetingId: string;
+  isReady: boolean;
+  isHidden: boolean;
+  isUpcoming: boolean;
+  isBotDisabled: boolean;
+  onDelete: () => Promise<void>;
+  onCancelBot: () => Promise<void>;
+  onEnableBot: () => Promise<void>;
+  onUnhide: () => Promise<void>;
+}) {
   const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -100,6 +142,13 @@ function RowMenu({ meetingId, isReady, onDelete }: { meetingId: string; isReady:
     if (open) document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [open]);
+
+  const runAction = (fn: () => Promise<void>) => async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setOpen(false);
+    await fn();
+  };
 
   const handleDeleteClick = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -124,8 +173,13 @@ function RowMenu({ meetingId, isReady, onDelete }: { meetingId: string; isReady:
         </svg>
       </button>
       {open && (
-        <div className="absolute top-full right-0 mt-1 w-40 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50">
-          {isReady && (
+        <div className="absolute top-full right-0 mt-1 w-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50 divide-y divide-zinc-100 dark:divide-zinc-800">
+          {isHidden && (
+            <button onClick={runAction(onUnhide)} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-violet-600 dark:text-violet-400 font-medium hover:bg-violet-50 dark:hover:bg-violet-950/30 transition-colors cursor-pointer">
+              <span>↩</span> Recover meeting
+            </button>
+          )}
+          {isReady && !isHidden && (
             <Link
               href={`/meetings/${meetingId}`}
               className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
@@ -134,32 +188,44 @@ function RowMenu({ meetingId, isReady, onDelete }: { meetingId: string; isReady:
               <span className="text-violet-500">↗</span> View Deck
             </Link>
           )}
-          <div className={isReady ? "border-t border-zinc-100 dark:border-zinc-800" : ""}>
-            {confirming ? (
-              <div className="flex gap-1.5 p-2">
+          {isUpcoming && !isHidden && (
+            <button onClick={runAction(onCancelBot)} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer">
+              <span>🔕</span> Cancel bot
+            </button>
+          )}
+          {isBotDisabled && !isHidden && (
+            <button onClick={runAction(onEnableBot)} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-violet-600 dark:text-violet-400 font-medium hover:bg-violet-50 dark:hover:bg-violet-950/30 transition-colors cursor-pointer">
+              <span>🔔</span> Enable bot
+            </button>
+          )}
+          {!isHidden && (
+            <>
+              {confirming ? (
+                <div className="flex gap-1.5 p-2">
+                  <button
+                    onClick={handleDeleteClick}
+                    disabled={deleting}
+                    className="flex-1 text-xs bg-red-600 hover:bg-red-500 text-white font-medium py-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {deleting ? "…" : "Confirm"}
+                  </button>
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirming(false); }}
+                    className="flex-1 text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 py-1.5 rounded-lg transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
                 <button
-                  onClick={handleDeleteClick}
-                  disabled={deleting}
-                  className="flex-1 text-xs bg-red-600 hover:bg-red-500 text-white font-medium py-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirming(true); }}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
                 >
-                  {deleting ? "…" : "Confirm"}
+                  <span>✕</span> Hide
                 </button>
-                <button
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirming(false); }}
-                  className="flex-1 text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 py-1.5 rounded-lg transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirming(true); }}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
-              >
-                <span>✕</span> Delete
-              </button>
-            )}
-          </div>
+              )}
+            </>
+          )}
         </div>
       )}
     </div>
