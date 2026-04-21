@@ -43,17 +43,12 @@ export function MeetingRow({ meeting, onDeleted }: { meeting: Classified; onDele
 
   const status = describeStatus(meeting);
   const clickable = meeting._ready;
+  const rowClass = `group flex items-center gap-4 bg-white dark:bg-zinc-900 border ${status.borderClass} rounded-xl px-4 py-3 transition-colors ${
+    clickable ? "hover:border-violet-400 dark:hover:border-violet-600 cursor-pointer" : ""
+  }`;
 
-  const Wrapper = clickable ? Link : "div";
-  const wrapperProps = clickable ? { href: `/meetings/${meeting.id}` } : {};
-
-  return (
-    <Wrapper
-      {...wrapperProps}
-      className={`group flex items-center gap-4 bg-white dark:bg-zinc-900 border ${status.borderClass} rounded-xl px-4 py-3 transition-colors ${
-        clickable ? "hover:border-violet-400 dark:hover:border-violet-600 cursor-pointer" : ""
-      }`}
-    >
+  const Body = (
+    <>
       {/* Thumbnail */}
       <div className={`relative w-20 h-12 shrink-0 rounded-md overflow-hidden ${status.thumbBg} flex items-center justify-center`}>
         {meeting._ready && meeting.preview_image ? (
@@ -79,7 +74,13 @@ export function MeetingRow({ meeting, onDeleted }: { meeting: Classified; onDele
       >
         {deleting ? "…" : "✕"}
       </button>
-    </Wrapper>
+    </>
+  );
+
+  return clickable ? (
+    <Link href={`/meetings/${meeting.id}`} className={rowClass}>{Body}</Link>
+  ) : (
+    <div className={rowClass}>{Body}</div>
   );
 }
 
