@@ -235,12 +235,26 @@ export default async function Home() {
         </form>
       </section>
 
-      <footer className="border-t border-zinc-200 dark:border-zinc-800 px-8 py-6 text-center text-zinc-400 text-sm space-x-4">
-        <span>© {new Date().getFullYear()} GammaMeet</span>
-        <a href="/faq" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">FAQ</a>
-        <a href="https://www.al-luken.space/" target="_blank" rel="noopener noreferrer" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Feedback</a>
-        <a href="/privacy" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Privacy</a>
-        <a href="/terms" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Terms</a>
+      <footer className="border-t border-zinc-200 dark:border-zinc-800 px-8 py-8 text-center text-zinc-400 text-sm space-y-3">
+        <p>
+          Built by{" "}
+          <a
+            href="https://www.al-luken.space/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-violet-500 hover:text-violet-400 transition-colors font-medium"
+          >
+            Alvaro Luken
+          </a>
+          {" "}— check out my portfolio ↗
+        </p>
+        <div className="space-x-4">
+          <span>© {new Date().getFullYear()} GammaMeet</span>
+          <a href="/faq" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">FAQ</a>
+          <a href="https://www.al-luken.space/" target="_blank" rel="noopener noreferrer" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Feedback</a>
+          <a href="/privacy" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Privacy</a>
+          <a href="/terms" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Terms</a>
+        </div>
       </footer>
     </main>
   );
