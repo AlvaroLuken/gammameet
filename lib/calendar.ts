@@ -11,6 +11,37 @@ export interface CalendarMeeting {
   meetLink?: string;
 }
 
+// Match Zoom meeting URLs in any vanity subdomain (e.g. zoom.us, my.zoom.us, company.zoom.us).
+// Covers /j/ (meetings) and /w/ (webinars).
+const ZOOM_URL_RE = /https?:\/\/[a-z0-9-]+\.zoom\.us\/(?:j|w|my)\/[^\s"'<>)]+/i;
+
+/**
+ * Resolve the conference URL for a calendar event.
+ * Priority: Google Meet (hangoutLink) → Zoom (found in conferenceData, location, or description).
+ */
+function extractConferenceLink(e: {
+  hangoutLink?: string | null;
+  conferenceData?: { entryPoints?: Array<{ uri?: string | null; entryPointType?: string | null }> | null } | null;
+  location?: string | null;
+  description?: string | null;
+}): string | undefined {
+  if (e.hangoutLink) return e.hangoutLink;
+
+  // Structured conference data (when Zoom is added via Calendar add-on)
+  for (const ep of e.conferenceData?.entryPoints ?? []) {
+    if (ep?.uri && ZOOM_URL_RE.test(ep.uri)) return ep.uri;
+  }
+
+  // Plain text fields — Zoom links are commonly pasted here
+  const candidates = [e.location, e.description].filter(Boolean) as string[];
+  for (const text of candidates) {
+    const match = text.match(ZOOM_URL_RE);
+    if (match) return match[0];
+  }
+
+  return undefined;
+}
+
 async function listEvents(accessToken: string, timeMin: string, timeMax: string): Promise<CalendarMeeting[]> {
   const auth = new google.auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
@@ -36,7 +67,7 @@ async function listEvents(accessToken: string, timeMin: string, timeMax: string)
       start: e.start!.dateTime!,
       end: e.end!.dateTime!,
       attendees: (e.attendees ?? []).map((a) => a.email!).filter(Boolean),
-      meetLink: e.hangoutLink ?? undefined,
+      meetLink: extractConferenceLink(e),
     }));
 }
 
