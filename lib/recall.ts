@@ -75,6 +75,20 @@ export async function deleteBot(botId: string): Promise<void> {
   }
 }
 
+/**
+ * Find all Recall bots tagged with a GammaMeet meeting id. Useful for recovering
+ * from the case where multiple bots were created for the same meeting (via a
+ * historical race) and the stored recall_bot_id points to one that has no recording.
+ */
+export async function findBotsForMeeting(meetingId: string): Promise<string[]> {
+  const url = `${RECALL_BASE}/bot/?metadata.gammameet_meeting_id=${encodeURIComponent(meetingId)}`;
+  const res = await fetch(url, { headers: recallHeaders() });
+  if (!res.ok) return [];
+  const data = await res.json();
+  const results: Array<{ id?: string }> = Array.isArray(data?.results) ? data.results : (Array.isArray(data) ? data : []);
+  return results.map((r) => r.id).filter((id): id is string => !!id);
+}
+
 export interface BotData {
   segments: RecallTranscriptSegment[];
   meetingTitle: string | null;
