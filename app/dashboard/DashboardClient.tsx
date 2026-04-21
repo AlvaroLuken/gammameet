@@ -16,8 +16,18 @@ interface Meeting {
   recall_bot_id: string | null;
   transcript_error: boolean | null;
   bot_status: string | null;
+  failure_reason: string | null;
   meeting_invites?: { email: string }[];
 }
+
+const FAILURE_COPY: Record<string, string> = {
+  not_admitted: "Jim wasn't admitted to the meeting",
+  bot_fatal: "The notetaker bot hit an error",
+  transcript_failed: "Transcript couldn't be generated",
+  timeout: "No recording received in time",
+};
+// Failures where retry has a chance of working
+const RETRYABLE = new Set(["transcript_failed", "timeout"]);
 
 interface User {
   name: string;
@@ -636,28 +646,69 @@ function MeetingCard({ meeting, onDeleted }: { meeting: Meeting & { _upcoming?: 
 
   // Failed: transcript failed or timed out
   if (isFailed) {
-    return (
-      <div className="flex flex-col bg-white dark:bg-zinc-900 border border-red-200 dark:border-red-900/60 rounded-2xl overflow-hidden">
-        <div className="w-full aspect-video bg-red-50 dark:bg-red-950/20 flex items-center justify-center">
-          <span className="text-3xl opacity-30">✕</span>
-        </div>
-        <div className="flex flex-col gap-1.5 p-4 flex-1">
-          <p className="font-semibold text-zinc-900 dark:text-white leading-snug line-clamp-2">{meeting.title}</p>
-          <p className="text-zinc-500 dark:text-zinc-400 text-xs">{formatTime(meeting.start_time)}</p>
-          <div className="mt-auto pt-2 flex items-center justify-between">
-            <span className="text-xs text-red-400">Generation failed</span>
-            <button onClick={handleDelete} disabled={deleting} className="text-xs text-zinc-400 hover:text-red-400 transition-colors cursor-pointer disabled:opacity-50">
-              {deleting ? "Deleting…" : "Delete"}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+    return <FailedCard meeting={meeting} onDeleted={onDeleted} />;
   }
 
   // Ready: deck generated
   return (
     <CardMenu id={meeting.id} title={meeting.title} previewImage={meeting.preview_image} duration={duration} tint={dateTint(meeting.start_time)} onDeleted={onDeleted} />
+  );
+}
+
+function FailedCard({ meeting, onDeleted }: { meeting: Meeting & { failure_reason: string | null }; onDeleted: (id: string) => void }) {
+  const [deleting, setDeleting] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const [retryError, setRetryError] = useState<string | null>(null);
+  const reason = meeting.failure_reason ?? "";
+  const reasonCopy = FAILURE_COPY[reason] ?? "Generation failed";
+  const canRetry = RETRYABLE.has(reason) && !!meeting.recall_bot_id;
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    await fetch(`/api/meetings/${meeting.id}`, { method: "DELETE" });
+    onDeleted(meeting.id);
+  };
+
+  const handleRetry = async () => {
+    setRetryError(null);
+    setRetrying(true);
+    try {
+      const res = await fetch(`/api/meetings/${meeting.id}/regenerate`, { method: "POST" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setRetryError(body.error ?? "Retry failed");
+      }
+    } catch {
+      setRetryError("Retry failed");
+    } finally {
+      setRetrying(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col bg-white dark:bg-zinc-900 border border-red-200 dark:border-red-900/60 rounded-2xl overflow-hidden">
+      <div className="w-full aspect-video bg-red-50 dark:bg-red-950/20 flex items-center justify-center">
+        <span className="text-3xl opacity-30">✕</span>
+      </div>
+      <div className="flex flex-col gap-1.5 p-4 flex-1">
+        <p className="font-semibold text-zinc-900 dark:text-white leading-snug line-clamp-2">{meeting.title}</p>
+        <p className="text-zinc-500 dark:text-zinc-400 text-xs">{formatTime(meeting.start_time)}</p>
+        <p className="text-xs text-red-500 dark:text-red-400 mt-1">{reasonCopy}</p>
+        {retryError && <p className="text-xs text-zinc-400 mt-1">{retryError}</p>}
+        <div className="mt-auto pt-2 flex items-center justify-between gap-2">
+          {canRetry ? (
+            <button onClick={handleRetry} disabled={retrying || deleting} className="text-xs font-semibold text-violet-600 dark:text-violet-400 hover:text-violet-500 transition-colors cursor-pointer disabled:opacity-50">
+              {retrying ? "Retrying…" : "↻ Retry"}
+            </button>
+          ) : (
+            <span className="text-xs text-zinc-400">Can't retry this one</span>
+          )}
+          <button onClick={handleDelete} disabled={deleting || retrying} className="text-xs text-zinc-400 hover:text-red-400 transition-colors cursor-pointer disabled:opacity-50">
+            {deleting ? "Deleting…" : "Delete"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

@@ -30,7 +30,10 @@ export async function POST(req: NextRequest) {
   if (event === "transcript.failed") {
     const botId = botObj?.id as string | undefined;
     if (botId) {
-      await supabase.from("meetings").update({ transcript_error: true, bot_status: "failed" }).eq("recall_bot_id", botId);
+      await supabase
+        .from("meetings")
+        .update({ transcript_error: true, bot_status: "failed", failure_reason: "transcript_failed" })
+        .eq("recall_bot_id", botId);
     }
     console.log("Recall transcript failed:", JSON.stringify(data));
     return NextResponse.json({ received: true, skipped: true });
@@ -48,6 +51,10 @@ export async function POST(req: NextRequest) {
     "bot.done": "ended",
     "bot.recording_permission_denied": "failed",
     "bot.fatal": "failed",
+  };
+  const failureReasonMap: Record<string, string> = {
+    "bot.recording_permission_denied": "not_admitted",
+    "bot.fatal": "bot_fatal",
   };
   const rank: Record<string, number> = { scheduled: 0, joining: 1, recording: 2, ended: 3, failed: 99 };
 
@@ -69,7 +76,10 @@ export async function POST(req: NextRequest) {
       if (next === "failed" || (rank[next] ?? 0) > (rank[current] ?? 0)) {
         update.bot_status = next;
       }
-      if (next === "failed") update.transcript_error = true;
+      if (next === "failed") {
+        update.transcript_error = true;
+        update.failure_reason = failureReasonMap[event] ?? "bot_failed";
+      }
       if (Object.keys(update).length > 0) {
         await supabase.from("meetings").update(update).eq("id", m.id);
       }

@@ -42,7 +42,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     await supabase
       .from("meetings")
-      .update({ gamma_url: gammaUrl, export_url: exportUrl, preview_image: previewImage })
+      .update({ gamma_url: gammaUrl, export_url: exportUrl, preview_image: previewImage, transcript_error: false, failure_reason: null, bot_status: "ended" })
       .eq("id", id);
 
     return NextResponse.json({ ok: true, gammaUrl, exportUrl, previewImage });

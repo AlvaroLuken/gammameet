@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
   const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
   const { data: staleMeetings, error: staleErr } = await supabase
     .from("meetings")
-    .update({ transcript_error: true })
+    .update({ transcript_error: true, failure_reason: "timeout" })
     .not("recall_bot_id", "is", null)
     .is("gamma_url", null)
     .eq("transcript_error", false)

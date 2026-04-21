@@ -1,4 +1,16 @@
 import { Resend } from "resend";
+import { supabase } from "./supabase";
+import { unsubscribeUrl } from "./unsubscribe";
+
+async function filterOptedOut(emails: string[]): Promise<string[]> {
+  if (emails.length === 0) return [];
+  const { data } = await supabase
+    .from("email_opt_outs")
+    .select("email")
+    .in("email", emails.map((e) => e.toLowerCase()));
+  const optedOut = new Set((data ?? []).map((r) => r.email));
+  return emails.filter((e) => !optedOut.has(e.toLowerCase()));
+}
 
 const BASE_STYLE = `
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
@@ -57,6 +69,12 @@ export async function sendRecapEmail({
 }) {
   const resend = new Resend(process.env.RESEND_API_KEY);
 
+  const filteredTo = await filterOptedOut(to);
+  if (filteredTo.length === 0) {
+    console.log("sendRecapEmail: all recipients have opted out, skipping");
+    return;
+  }
+
   const formattedDate = new Date(meetingDate).toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -64,7 +82,32 @@ export async function sendRecapEmail({
     year: "numeric",
   });
 
-  const inner = `
+  // Resend: one email per recipient so each gets their own unsubscribe link
+  await Promise.all(
+    filteredTo.map(async (recipient) => {
+      const inner = renderRecapInner({ meetingTitle, formattedDate, gammaUrl, previewImage, unsubUrl: unsubscribeUrl(recipient) });
+      await resend.emails.send({
+        from: process.env.EMAIL_FROM!,
+        to: [recipient],
+        subject: `Your deck is ready: ${meetingTitle}`,
+        html: wrap(inner, `Your GammaMeet deck for "${meetingTitle}" is ready.`),
+        headers: {
+          "List-Unsubscribe": `<${unsubscribeUrl(recipient)}>`,
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
+      });
+    })
+  );
+}
+
+function renderRecapInner({ meetingTitle, formattedDate, gammaUrl, previewImage, unsubUrl }: {
+  meetingTitle: string;
+  formattedDate: string;
+  gammaUrl: string;
+  previewImage: string | null;
+  unsubUrl: string;
+}) {
+  return `
     <tr>
       <td style="padding:32px;">
         <p style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:#7c3aed;margin:0 0 8px;">
@@ -96,19 +139,15 @@ export async function sendRecapEmail({
     </tr>
     <tr>
       <td style="padding:20px 32px 28px;background:#fafafa;border-top:1px solid #f4f4f5;">
-        <p style="color:#9ca3af;font-size:12px;margin:0;line-height:1.5;">
+        <p style="color:#9ca3af;font-size:12px;margin:0 0 6px;line-height:1.5;">
           Generated automatically by GammaMeet · <a href="https://www.gamma-meet.com" style="color:#7c3aed;text-decoration:none;">Get your own meeting decks</a>
+        </p>
+        <p style="color:#9ca3af;font-size:11px;margin:0;line-height:1.5;">
+          Received this because you attended the meeting. <a href="${unsubUrl}" style="color:#9ca3af;text-decoration:underline;">Unsubscribe</a>.
         </p>
       </td>
     </tr>
   `;
-
-  await resend.emails.send({
-    from: process.env.EMAIL_FROM!,
-    to,
-    subject: `Your deck is ready: ${meetingTitle}`,
-    html: wrap(inner, `Your GammaMeet deck for "${meetingTitle}" is ready.`),
-  });
 }
 
 export async function sendWelcomeEmail({ to, name }: { to: string; name: string | null }) {
