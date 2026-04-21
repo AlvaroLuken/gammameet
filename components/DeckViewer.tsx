@@ -5,18 +5,32 @@ import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
-// Load worker from CDN (matches installed pdfjs-dist version pulled in by react-pdf)
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
+// Serve pdfjs worker from our own public folder so the version always matches
+// the installed pdfjs-dist (no CDN version-skew issues).
+pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
 export function DeckViewer({ exportUrl }: { exportUrl: string }) {
   const [numPages, setNumPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [containerWidth, setContainerWidth] = useState<number>(0);
+  const [loadFailed, setLoadFailed] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
   // Route the PDF through our own origin so PDF.js can fetch without CORS issues
   const fileUrl = `/api/deck-proxy?url=${encodeURIComponent(exportUrl)}`;
+
+  // Fallback: if PDF.js fails to load, use the native PDF embed so users still see the deck
+  if (loadFailed) {
+    return (
+      <embed
+        src={`${exportUrl}#toolbar=0&navpanes=0&scrollbar=0&statusbar=0`}
+        type="application/pdf"
+        className="w-full rounded-xl"
+        style={{ height: "min(calc(100vh - 120px), 80vw)" }}
+      />
+    );
+  }
 
   // Track container width to render PDF pages at the right size
   useEffect(() => {
@@ -93,6 +107,10 @@ export function DeckViewer({ exportUrl }: { exportUrl: string }) {
         <Document
           file={fileUrl}
           onLoadSuccess={onDocumentLoadSuccess}
+          onLoadError={(err) => {
+            console.error("PDF.js failed to load deck, falling back to embed:", err);
+            setLoadFailed(true);
+          }}
           loading={<DeckLoading />}
           error={<DeckError />}
         >
