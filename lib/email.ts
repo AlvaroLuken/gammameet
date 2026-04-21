@@ -200,9 +200,9 @@ export async function sendWelcomeEmail({ to, name }: { to: string; name: string 
             What happens next
           </p>
           <ol style="margin:0;padding-left:20px;color:#374151;font-size:14px;line-height:1.8;">
-            <li><strong>GammaMeet watches your calendar</strong> for upcoming meetings with a Google Meet link.</li>
+            <li><strong>GammaMeet watches your calendar</strong> for upcoming meetings with a Google Meet or Zoom link.</li>
             <li><strong>Jim from GammaMeet</strong> joins each meeting 2 min before it starts — just admit him when he knocks.</li>
-            <li><strong>For Zoom or ad-hoc calls</strong>, paste the link at <a href="https://www.gamma-meet.com/add-bot" style="color:#7c3aed;text-decoration:none;">gamma-meet.com/add-bot</a> and Jim joins instantly.</li>
+            <li><strong>For ad-hoc calls</strong>, paste any Meet or Zoom link at <a href="https://www.gamma-meet.com/add-bot" style="color:#7c3aed;text-decoration:none;">gamma-meet.com/add-bot</a> and Jim joins instantly.</li>
             <li><strong>A polished deck</strong> lands in everyone's inbox within minutes of the meeting ending.</li>
           </ol>
         </div>

@@ -103,7 +103,7 @@ const SECTIONS = [
     items: [
       {
         q: "Which meeting platforms do you support?",
-        a: "GammaMeet supports Google Meet (auto-joined from your calendar) and Zoom (paste the link into + Add bot). Microsoft Teams and Webex are on the roadmap.",
+        a: "GammaMeet supports Google Meet and Zoom — both auto-joined from your Google Calendar (just make sure the link is in the event). You can also paste any Meet or Zoom link directly via + Add bot. Microsoft Teams and Webex are on the roadmap.",
       },
       {
         q: "What about meetings without a video link?",
