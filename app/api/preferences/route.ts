@@ -12,7 +12,7 @@ export interface DashboardPrefs {
 }
 
 const defaults: DashboardPrefs = {
-  showUpcoming: false,
+  showUpcoming: true,
   showProcessing: false,
   showFailed: false,
   shareMode: "all_attendees",
