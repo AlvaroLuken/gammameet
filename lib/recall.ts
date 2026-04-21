@@ -79,14 +79,29 @@ export async function deleteBot(botId: string): Promise<void> {
  * Find all Recall bots tagged with a GammaMeet meeting id. Useful for recovering
  * from the case where multiple bots were created for the same meeting (via a
  * historical race) and the stored recall_bot_id points to one that has no recording.
+ *
+ * Filters client-side by metadata.gammameet_meeting_id because Recall's list
+ * endpoint query params don't reliably honor metadata filters.
  */
 export async function findBotsForMeeting(meetingId: string): Promise<string[]> {
-  const url = `${RECALL_BASE}/bot/?metadata.gammameet_meeting_id=${encodeURIComponent(meetingId)}`;
-  const res = await fetch(url, { headers: recallHeaders() });
-  if (!res.ok) return [];
-  const data = await res.json();
-  const results: Array<{ id?: string }> = Array.isArray(data?.results) ? data.results : (Array.isArray(data) ? data : []);
-  return results.map((r) => r.id).filter((id): id is string => !!id);
+  const collected: Array<{ id?: string; metadata?: Record<string, string> | null }> = [];
+  // Walk up to 3 pages (~300 bots) of the most-recent bots
+  let nextUrl: string | null = `${RECALL_BASE}/bot/?ordering=-created_at&page_size=100`;
+  for (let page = 0; page < 3 && nextUrl; page++) {
+    const res: Response = await fetch(nextUrl, { headers: recallHeaders() });
+    if (!res.ok) break;
+    const data = await res.json();
+    const batch: Array<{ id?: string; metadata?: Record<string, string> | null }> = Array.isArray(data?.results)
+      ? data.results
+      : (Array.isArray(data) ? data : []);
+    collected.push(...batch);
+    nextUrl = typeof data?.next === "string" ? data.next : null;
+  }
+
+  return collected
+    .filter((b) => b.metadata?.gammameet_meeting_id === meetingId)
+    .map((b) => b.id)
+    .filter((id): id is string => !!id);
 }
 
 export interface BotData {
