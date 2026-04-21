@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
-import { getBotData, buildPromptFromRecallTranscript, inferTitleFromSegments, findBotsForMeeting, generateMeetingBrief, type BotData } from "@/lib/recall";
+import { getBotData, buildPromptFromRecallTranscript, inferTitleFromSegments, findBotsForMeeting, generateMeetingBrief, verifyBotForMeeting, type BotData } from "@/lib/recall";
 import { generateGammaPage } from "@/lib/gamma";
 
 export const maxDuration = 300;
@@ -25,10 +25,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!isAttendee) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   // Build the list of bots to try, in priority order:
-  //   1) the bot id stored on the meeting
-  //   2) any other bots Recall has tagged with this meeting id (recovers from historical duplicate-bot races)
+  //   1) the bot id stored on the meeting (if its metadata matches the meeting)
+  //   2) any other bots Recall has tagged with this meeting id
+  // Every candidate MUST pass a metadata-match check — otherwise we could pull
+  // another meeting's transcript (happened historically when a bad regenerate
+  // wrote the wrong bot_id back to the meeting record).
   const candidateIds: string[] = [];
-  if (meeting.recall_bot_id) candidateIds.push(meeting.recall_bot_id);
+  if (meeting.recall_bot_id) {
+    const ok = await verifyBotForMeeting(meeting.recall_bot_id, id).catch(() => false);
+    if (ok) {
+      candidateIds.push(meeting.recall_bot_id);
+    } else {
+      console.warn(`Regenerate: stored recall_bot_id ${meeting.recall_bot_id} does not belong to meeting ${id} — ignoring`);
+    }
+  }
   try {
     const otherBots = await findBotsForMeeting(id);
     for (const b of otherBots) if (!candidateIds.includes(b)) candidateIds.push(b);
@@ -37,10 +47,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   if (candidateIds.length === 0) {
-    return NextResponse.json({ error: "No bot recording available to regenerate from" }, { status: 400 });
+    return NextResponse.json({ error: "No recording found for this meeting. The bot may not have joined, or its recording has expired." }, { status: 404 });
   }
 
-  // Try each bot until one returns a transcript
+  // Try each bot until one returns a usable transcript
   let botData: BotData | null = null;
   let usedBotId: string | null = null;
   const errors: string[] = [];

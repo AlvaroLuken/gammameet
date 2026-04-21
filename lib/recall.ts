@@ -161,6 +161,11 @@ export function inferTitleFromSegments(segments: RecallTranscriptSegment[]): str
   return top.length > 0 ? top.join(', ') + ' Discussion' : 'Team Meeting';
 }
 
+export async function verifyBotForMeeting(botId: string, meetingId: string): Promise<boolean> {
+  const meta = await getBotMetadata(botId);
+  return meta.gammameet_meeting_id === meetingId;
+}
+
 export async function getBotMetadata(botId: string): Promise<Record<string, string>> {
   const res = await fetch(`${RECALL_BASE}/bot/${botId}/`, {
     headers: recallHeaders(),
