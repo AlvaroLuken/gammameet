@@ -196,8 +196,10 @@ export default function DashboardClient({ user }: { user: User }) {
 
     // Bot-status is the only reliable signal for "generating" — a scheduled
     // end time tells us nothing because meetings run over. We only switch to
-    // "generating" once Recall tells us the bot actually left the call.
-    const isGenerating = !isReady && !botFailed && hasBot && status === "ended";
+    // "generating" once Recall tells us the bot actually left the call ("ended")
+    // OR our pipeline has started processing the transcript ("processing").
+    const isGenerating =
+      !isReady && !botFailed && hasBot && (status === "ended" || status === "processing");
 
     // In progress: bot confirmed recording, OR we're past start_time with a
     // bot scheduled and webhook hasn't caught up yet. Stays "in progress"
