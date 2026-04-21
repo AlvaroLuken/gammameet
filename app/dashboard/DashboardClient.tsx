@@ -446,24 +446,39 @@ export default function DashboardClient({ user }: { user: User }) {
                 <div className="max-w-lg mx-auto py-12 space-y-6">
                   <div className="text-center space-y-2">
                     <p className="text-2xl font-bold">Welcome to GammaMeet</p>
-                    <p className="text-zinc-500 text-sm">Follow these steps to get your first deck.</p>
+                    <p className="text-zinc-500 text-sm">Your next Meet call will appear here as it happens.</p>
                   </div>
+
+                  {/* Live listening banner */}
+                  <div className="bg-gradient-to-br from-violet-50 to-white dark:from-violet-950/40 dark:to-zinc-900 border border-violet-200 dark:border-violet-900/60 rounded-2xl p-5 flex items-start gap-4">
+                    <span className="relative flex items-center justify-center mt-1 shrink-0">
+                      <span className="absolute w-2.5 h-2.5 rounded-full bg-violet-500 animate-ping opacity-60" />
+                      <span className="relative w-2.5 h-2.5 rounded-full bg-violet-500" />
+                    </span>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-zinc-900 dark:text-white">Listening for your next meeting</p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
+                        We're watching your Google Calendar. Any meeting with a Meet link will show up here the moment it's added — and a deck will generate automatically after it ends.
+                      </p>
+                    </div>
+                  </div>
+
                   <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl divide-y divide-zinc-100 dark:divide-zinc-800 overflow-hidden">
                     {/* Step 1 */}
                     <div className="flex items-start gap-4 p-5">
                       <span className="w-7 h-7 rounded-full bg-green-100 dark:bg-green-950 text-green-600 dark:text-green-400 text-sm flex items-center justify-center shrink-0 font-bold mt-0.5">✓</span>
                       <div>
                         <p className="font-semibold text-sm">Sign in with Google</p>
-                        <p className="text-zinc-500 dark:text-zinc-400 text-xs mt-0.5">Your Google Calendar is connected and ready.</p>
+                        <p className="text-zinc-500 dark:text-zinc-400 text-xs mt-0.5">Your Google Calendar is connected.</p>
                       </div>
                     </div>
                     {/* Step 2 */}
                     <div className="flex items-start gap-4 p-5">
                       <span className="w-7 h-7 rounded-full bg-violet-100 dark:bg-violet-950 text-violet-600 dark:text-violet-400 text-sm flex items-center justify-center shrink-0 font-bold mt-0.5">2</span>
                       <div className="flex-1 space-y-1">
-                        <p className="font-semibold text-sm">Admit the bot to your meeting</p>
+                        <p className="font-semibold text-sm">Admit Jim when he knocks</p>
                         <p className="text-zinc-500 dark:text-zinc-400 text-xs leading-relaxed">
-                          A <span className="font-medium text-zinc-700 dark:text-zinc-300">GammaMeet Notetaker</span> bot joins your meetings automatically — just hit <span className="font-medium text-zinc-700 dark:text-zinc-300">Admit</span> when it knocks. For last-minute meetings, use <Link href="/add-bot" className="text-violet-500 hover:underline">+ Add bot</Link>.
+                          <span className="font-medium text-zinc-700 dark:text-zinc-300">Jim from GammaMeet</span> joins each call 2 minutes before it starts. Need it for a meeting happening right now? Use <Link href="/add-bot" className="text-violet-500 hover:underline font-medium">+ Add bot</Link>.
                         </p>
                       </div>
                     </div>
@@ -472,9 +487,15 @@ export default function DashboardClient({ user }: { user: User }) {
                       <span className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-400 text-sm flex items-center justify-center shrink-0 font-bold mt-0.5">3</span>
                       <div>
                         <p className="font-semibold text-sm">Your deck appears here</p>
-                        <p className="text-zinc-500 dark:text-zinc-400 text-xs mt-0.5">After the meeting ends, GammaMeet generates your deck and emails it to all attendees automatically.</p>
+                        <p className="text-zinc-500 dark:text-zinc-400 text-xs mt-0.5">GammaMeet generates the deck and emails it to everyone on the call.</p>
                       </div>
                     </div>
+                  </div>
+
+                  <div className="flex justify-center">
+                    <Link href="/add-bot" className="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-colors cursor-pointer">
+                      + Add bot to a meeting now
+                    </Link>
                   </div>
                 </div>
               )

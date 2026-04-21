@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import { supabase } from "./supabase";
+import { sendWelcomeEmail } from "./email";
 
 async function refreshAccessToken(refreshToken: string) {
   const res = await fetch("https://oauth2.googleapis.com/token", {
@@ -48,6 +49,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.refreshToken = account.refresh_token;
         token.expiresAt = account.expires_at;
 
+        // Detect first-time sign-in to fire a welcome email
+        let isNewUser = false;
+        if (token.email) {
+          const { data: existing } = await supabase
+            .from("users")
+            .select("id")
+            .eq("email", token.email)
+            .maybeSingle();
+          isNewUser = !existing;
+        }
+
         await supabase.from("users").upsert(
           {
             email: token.email,
@@ -57,6 +69,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           },
           { onConflict: "email" }
         );
+
+        if (isNewUser && token.email) {
+          sendWelcomeEmail({ to: token.email, name: token.name ?? null }).catch((err) =>
+            console.error("Welcome email failed:", err)
+          );
+        }
         return token;
       }
 
