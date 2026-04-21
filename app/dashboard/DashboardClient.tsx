@@ -203,11 +203,19 @@ export default function DashboardClient({ user }: { user: User }) {
 
     const isReady = !!m.gamma_url;
     const botFailed = status === "failed" || !!m.transcript_error;
+    const hasBot = !!m.recall_bot_id;
 
-    // Bot confirmed active
-    const isInProgress = !isReady && status === "recording";
-    // Bot confirmed ended, transcript processing
-    const isGenerating = !isReady && status === "ended";
+    // Time-window signals (used as fallbacks when Recall webhook events lag)
+    const inMeetingWindow = now >= startMs && now <= endMs;
+    const justEnded = now > endMs && now <= endMs + 10 * 60 * 1000;
+
+    // Bot confirmed live OR we're inside the scheduled window with a bot scheduled
+    const isInProgress =
+      !isReady && !botFailed && hasBot && (status === "recording" || inMeetingWindow);
+
+    // Bot confirmed ended OR we just passed end_time with a bot that was supposed to record
+    const isGenerating =
+      !isReady && !botFailed && hasBot && !isInProgress && (status === "ended" || justEnded);
 
     // Bot hasn't reached "recording" yet
     const botEverJoined = status === "recording" || status === "ended";
