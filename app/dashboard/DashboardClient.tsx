@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { MeetingRow } from "@/components/MeetingRow";
 
 interface Meeting {
   id: string;
@@ -133,6 +134,18 @@ export default function DashboardClient({ user }: { user: User }) {
   const [showUpcoming, setShowUpcoming] = useState(false);
   const [showProcessing, setShowProcessing] = useState(false);
   const [showFailed, setShowFailed] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+
+  // Load view preference from localStorage
+  useEffect(() => {
+    const saved = typeof window !== "undefined" ? window.localStorage.getItem("gm-view-mode") : null;
+    if (saved === "grid" || saved === "list") setViewMode(saved);
+  }, []);
+
+  const changeViewMode = (mode: "grid" | "list") => {
+    setViewMode(mode);
+    if (typeof window !== "undefined") window.localStorage.setItem("gm-view-mode", mode);
+  };
 
   useEffect(() => {
     fetch("/api/preferences")
@@ -395,6 +408,35 @@ export default function DashboardClient({ user }: { user: User }) {
           </Link>
         </div>
         <div className="flex items-center gap-2">
+          {/* View mode toggle — hidden on mobile (grid is always fine there) */}
+          <div className="hidden md:inline-flex items-center bg-zinc-100 dark:bg-zinc-800 rounded-full p-0.5">
+            <button
+              onClick={() => changeViewMode("grid")}
+              className={`w-7 h-7 flex items-center justify-center rounded-full transition-colors cursor-pointer ${
+                viewMode === "grid"
+                  ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm"
+                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+              }`}
+              title="Grid view"
+            >
+              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z" />
+              </svg>
+            </button>
+            <button
+              onClick={() => changeViewMode("list")}
+              className={`w-7 h-7 flex items-center justify-center rounded-full transition-colors cursor-pointer ${
+                viewMode === "list"
+                  ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm"
+                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+              }`}
+              title="List view"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
           <Link
             href="/add-bot"
             className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-full transition-colors cursor-pointer"
@@ -520,9 +562,15 @@ export default function DashboardClient({ user }: { user: User }) {
                       <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
                       <span className="text-xs text-zinc-400 dark:text-zinc-600">{ms.length} deck{ms.length !== 1 ? "s" : ""}</span>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {ms.map((m) => <MeetingCard key={m.id} meeting={m} onDeleted={(id) => setMeetings((prev) => prev.filter((x) => x.id !== id))} />)}
-                    </div>
+                    {viewMode === "grid" ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {ms.map((m) => <MeetingCard key={m.id} meeting={m} onDeleted={(id) => setMeetings((prev) => prev.filter((x) => x.id !== id))} />)}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        {ms.map((m) => <MeetingRow key={m.id} meeting={m} onDeleted={(id) => setMeetings((prev) => prev.filter((x) => x.id !== id))} />)}
+                      </div>
+                    )}
                   </div>
                 ))}
               </>
