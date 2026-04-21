@@ -133,6 +133,23 @@ async function processMeeting(
     return NextResponse.json({ received: true, skipped: "already processed" });
   }
 
+  // Atomic claim: flip bot_status to "processing" so parallel webhook calls
+  // (from duplicate bots or retries) can't both generate decks + send emails.
+  // The row lock ensures only one worker wins.
+  const { data: claim } = await supabase
+    .from("meetings")
+    .update({ bot_status: "processing" })
+    .eq("id", meeting.id)
+    .is("gamma_url", null)
+    .or("bot_status.is.null,bot_status.neq.processing")
+    .select("id")
+    .maybeSingle();
+
+  if (!claim) {
+    console.log(`Webhook processMeeting skipped for ${meeting.id} — already claimed by another worker`);
+    return NextResponse.json({ received: true, skipped: "already claimed" });
+  }
+
   try {
     const { segments, meetingTitle: recallTitle, participantEmails } = await getBotData(botId);
 

@@ -195,14 +195,16 @@ export async function scheduleBotsForUser(userId: string, userEmail: string, acc
 
     if (!shouldCreateBot) continue;
 
-    // Atomic claim: mark bot_status="claiming" only if no bot exists yet.
-    // This prevents two parallel workers (cron + calendar webhook) from
-    // each spawning a bot for the same meeting.
+    // Atomic claim: flip bot_status from null → "claiming" in a single UPDATE.
+    // The row-level lock ensures only one worker succeeds; all parallel callers
+    // that arrive during the createBot call (~2-5s) see bot_status already
+    // set and skip.
     const { data: claim } = await supabase
       .from("meetings")
       .update({ bot_status: "claiming" })
       .eq("id", meetingId)
       .is("recall_bot_id", null)
+      .is("bot_status", null)
       .select("id")
       .maybeSingle();
 
