@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { getBotData, getBotMetadata, buildPromptFromRecallTranscript, inferTitleFromSegments, generateSummaryAndActions } from "@/lib/recall";
+import { getBotData, getBotMetadata, buildPromptFromRecallTranscript, inferTitleFromSegments, generateMeetingBrief } from "@/lib/recall";
 import { generateGammaPage } from "@/lib/gamma";
 import { sendRecapEmail } from "@/lib/email";
 
@@ -159,14 +159,16 @@ async function processMeeting(
       );
     }
 
-    const content = buildPromptFromRecallTranscript(title, meeting.start_time, participantNames, segments);
-    const [{ summary, actionItems }, { gammaUrl, exportUrl, previewImage }] = await Promise.all([
-      generateSummaryAndActions(segments).catch((err) => {
-        console.error("Claude summary failed:", err);
-        return { summary: "", actionItems: "" };
-      }),
-      generateGammaPage(title, content),
-    ]);
+    // Generate a structured brief first — this feeds Gamma a much better input than raw transcript
+    const brief = await generateMeetingBrief(segments, title, meeting.start_time, participantNames).catch((err) => {
+      console.error("Claude brief failed, falling back to raw transcript:", err);
+      return { summary: "", actionItems: "", gammaBrief: "" };
+    });
+    const { summary, actionItems, gammaBrief } = brief;
+
+    // Prefer the structured brief; fall back to raw transcript formatting if the brief is empty
+    const gammaInput = gammaBrief || buildPromptFromRecallTranscript(title, meeting.start_time, participantNames, segments);
+    const { gammaUrl, exportUrl, previewImage } = await generateGammaPage(title, gammaInput);
 
     // Critical update — must succeed
     const { error: updateErr } = await supabase

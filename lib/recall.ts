@@ -154,35 +154,56 @@ function transcriptToText(segments: RecallTranscriptSegment[]): string {
     .join("\n");
 }
 
-export async function generateSummaryAndActions(segments: RecallTranscriptSegment[]): Promise<{
-  summary: string;
-  actionItems: string;
-}> {
+export interface MeetingBrief {
+  summary: string;      // 2-4 sentence exec summary (for sidebar)
+  actionItems: string;  // bullet list of committed tasks (for sidebar)
+  gammaBrief: string;   // structured markdown doc fed to Gamma for deck generation
+}
+
+export async function generateMeetingBrief(
+  segments: RecallTranscriptSegment[],
+  meetingTitle: string,
+  meetingDate: string,
+  participants: string[]
+): Promise<MeetingBrief> {
   if (!process.env.ANTHROPIC_API_KEY) {
-    console.warn("ANTHROPIC_API_KEY not set, skipping LLM summary");
-    return { summary: "", actionItems: "" };
+    console.warn("ANTHROPIC_API_KEY not set, skipping LLM brief");
+    return { summary: "", actionItems: "", gammaBrief: "" };
   }
 
   const text = transcriptToText(segments);
-  if (!text.trim()) return { summary: "", actionItems: "" };
+  if (!text.trim()) return { summary: "", actionItems: "", gammaBrief: "" };
 
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+  const systemPrompt = `You are a senior strategist preparing a post-meeting brief. Your job is to turn a raw transcript into a crisp, insight-heavy analysis that will be rendered as a polished presentation deck.
+
+Write as a clear analyst, not a note-taker. Organize by theme, not chronology. Lead with WHY things matter, not just WHAT was said. Use the participants' actual words as quotes when they're pithy or load-bearing. Skip filler — no "we then talked about" summaries of summaries.
+
+Return strict JSON with exactly these three fields, no prose outside the JSON:
+
+{
+  "summary": "2-4 sentences. What was this meeting about, what got decided, and why does it matter? Not a retelling — a takeaway. Write for someone who wasn't there.",
+  "actionItems": ["Each committed task, one per string. Include the owner if mentioned (e.g. \\"Alice: Ship the dashboard mockup by Friday\\"). Empty array if nothing actionable. Never invent."],
+  "gammaBrief": "A structured markdown document Gamma will turn into a presentation. Use H1 for the title, H2 for major sections. Target 8 sections that make great slides. Required sections:\\n\\n# {meeting title}\\n\\n## TL;DR\\n2-3 sentences on the biggest takeaway.\\n\\n## Key Decisions\\nBulleted, concrete. If no real decisions, say so honestly.\\n\\n## Action Items\\nBulleted with owners. If none, say 'No committed actions from this conversation.'\\n\\n## Core Themes\\nFor each major topic, a short heading and 2-4 sentences of insight. Use relevant direct quotes in italics with attribution. This is the meat of the deck.\\n\\n## Open Questions\\nThings raised but not resolved. What's still unknown.\\n\\n## Notable Quotes\\n2-4 memorable lines with speaker names. Pick ones that capture tone, insight, or tension.\\n\\n## Participants\\nAttendees and context on their roles if inferable.\\n\\n## Next Steps\\nForward-looking. What happens after this meeting — scheduled follow-ups, dependencies, etc."
+}`;
+
+  const userMessage = `Meeting: ${meetingTitle}
+Date: ${meetingDate}
+Participants: ${participants.join(", ")}
+
+Transcript:
+${text}`;
+
   const res = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 600,
-    system:
-      "You summarize meeting transcripts for a post-meeting recap. Return strict JSON only — no prose, no markdown. Schema: {\"summary\": string (2-4 concise sentences covering what the meeting was about and the key outcomes — not a retelling), \"actionItems\": string[] (each one a specific committed task with the owner if mentioned; empty array if none were detected — do not invent)}.",
-    messages: [
-      {
-        role: "user",
-        content: `Meeting transcript:\n\n${text}`,
-      },
-    ],
+    max_tokens: 3000,
+    system: systemPrompt,
+    messages: [{ role: "user", content: userMessage }],
   });
 
   const content = res.content[0];
-  if (content.type !== "text") return { summary: "", actionItems: "" };
+  if (content.type !== "text") return { summary: "", actionItems: "", gammaBrief: "" };
 
   try {
     const match = content.text.match(/\{[\s\S]*\}/);
@@ -191,11 +212,18 @@ export async function generateSummaryAndActions(segments: RecallTranscriptSegmen
     return {
       summary: String(parsed.summary ?? "").trim(),
       actionItems: actions.map((a) => "· " + a).join("\n"),
+      gammaBrief: String(parsed.gammaBrief ?? "").trim(),
     };
   } catch (err) {
-    console.error("Failed to parse Claude summary response:", err, content.text);
-    return { summary: "", actionItems: "" };
+    console.error("Failed to parse Claude brief response:", err, content.text);
+    return { summary: "", actionItems: "", gammaBrief: "" };
   }
+}
+
+// Back-compat wrapper
+export async function generateSummaryAndActions(segments: RecallTranscriptSegment[]) {
+  const { summary, actionItems } = await generateMeetingBrief(segments, "Meeting", new Date().toISOString(), []);
+  return { summary, actionItems };
 }
 
 export function buildPromptFromRecallTranscript(
