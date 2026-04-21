@@ -44,23 +44,25 @@ export function DeckViewer({ exportUrl }: { exportUrl: string }) {
     return () => ro.disconnect();
   }, []);
 
-  // Detect the slide most visible in the viewport as user scrolls
+  // Detect the slide in the center of the viewport as user scrolls.
+  // rootMargin shrinks the observer's effective viewport to a thin band in the
+  // middle — a slide is only "current" when its body crosses the center.
   useEffect(() => {
     if (numPages === 0) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        let best: { page: number; ratio: number } | null = null;
         for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
           const pageAttr = (entry.target as HTMLElement).dataset.page;
           if (!pageAttr) continue;
-          const page = parseInt(pageAttr, 10);
-          if (!best || entry.intersectionRatio > best.ratio) {
-            best = { page, ratio: entry.intersectionRatio };
-          }
+          setCurrentPage(parseInt(pageAttr, 10));
         }
-        if (best && best.ratio > 0) setCurrentPage(best.page);
       },
-      { threshold: [0.25, 0.5, 0.75], root: containerRef.current }
+      {
+        root: containerRef.current,
+        rootMargin: "-45% 0px -45% 0px",
+        threshold: 0,
+      }
     );
     pageRefs.current.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
@@ -71,8 +73,11 @@ export function DeckViewer({ exportUrl }: { exportUrl: string }) {
   }, []);
 
   const jumpToPage = (n: number) => {
+    // Optimistically set active page so the rail responds instantly;
+    // observer will confirm (or correct) after scroll settles.
+    setCurrentPage(n);
     const el = pageRefs.current.get(n);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
   return (
