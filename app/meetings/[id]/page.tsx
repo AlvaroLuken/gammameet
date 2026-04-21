@@ -7,6 +7,7 @@ import { MeetingTime } from "@/components/MeetingTime";
 import Image from "next/image";
 import { ActionsMenu } from "@/components/ActionsMenu";
 import { ExpandableText } from "@/components/ExpandableText";
+import { DeckViewer } from "@/components/DeckViewer";
 
 function letterAvatar(str: string) {
   const colors = ["bg-violet-500", "bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-rose-500", "bg-cyan-500", "bg-pink-500", "bg-orange-500"];
@@ -105,13 +106,10 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
         <main className="flex-1 md:overflow-y-auto bg-zinc-100 dark:bg-zinc-900 p-4">
           {meeting.export_url ? (
             <>
-              {/* Desktop: inline PDF embed */}
-              <embed
-                src={`${meeting.export_url}#toolbar=0&navpanes=0&scrollbar=0&statusbar=0`}
-                type="application/pdf"
-                className="hidden md:block w-full rounded-xl"
-                style={{ height: "min(calc(100vh - 120px), 80vw)" }}
-              />
+              {/* Desktop: deck viewer with slide rail */}
+              <div className="hidden md:block">
+                <DeckViewer exportUrl={meeting.export_url} />
+              </div>
               {/* Mobile: tap-to-open preview (PDF <embed> can't scroll pages on iOS Safari) */}
               <a
                 href={meeting.export_url}

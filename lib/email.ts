@@ -12,6 +12,31 @@ async function filterOptedOut(emails: string[]): Promise<string[]> {
   return emails.filter((e) => !optedOut.has(e.toLowerCase()));
 }
 
+/**
+ * Respect per-user share_mode preferences.
+ * If any registered GammaMeet user in the attendee list has share_mode="me_only",
+ * filter the recipient list to registered users only — non-registered attendees
+ * don't get the email.
+ */
+async function applySharePreferences(emails: string[]): Promise<string[]> {
+  if (emails.length === 0) return [];
+  const lowered = emails.map((e) => e.toLowerCase());
+  const { data: users } = await supabase
+    .from("users")
+    .select("email, dashboard_prefs")
+    .in("email", lowered);
+
+  const registered = new Set((users ?? []).map((u) => u.email.toLowerCase()));
+  const anyMeOnly = (users ?? []).some(
+    (u) => (u.dashboard_prefs as { shareMode?: string } | null)?.shareMode === "me_only"
+  );
+
+  if (anyMeOnly) {
+    return emails.filter((e) => registered.has(e.toLowerCase()));
+  }
+  return emails;
+}
+
 const BASE_STYLE = `
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -69,9 +94,10 @@ export async function sendRecapEmail({
 }) {
   const resend = new Resend(process.env.RESEND_API_KEY);
 
-  const filteredTo = await filterOptedOut(to);
+  const afterShare = await applySharePreferences(to);
+  const filteredTo = await filterOptedOut(afterShare);
   if (filteredTo.length === 0) {
-    console.log("sendRecapEmail: all recipients have opted out, skipping");
+    console.log("sendRecapEmail: no eligible recipients, skipping");
     return;
   }
 

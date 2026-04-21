@@ -160,11 +160,55 @@ export interface MeetingBrief {
   gammaBrief: string;   // structured markdown doc fed to Gamma for deck generation
 }
 
+export type MeetingType =
+  | "standup"
+  | "one_on_one"
+  | "customer_call"
+  | "brainstorm"
+  | "interview"
+  | "retro"
+  | "all_hands"
+  | "general";
+
+export function detectMeetingType(title: string, participantCount: number): MeetingType {
+  const t = title.toLowerCase();
+  if (/\bstand.?up\b|daily sync|daily check.?in|daily scrum/.test(t)) return "standup";
+  if (/\b1:?1\b|\b1-.?1\b|1 on 1|one.on.one|\bcatch.?up\b|mentor/.test(t)) return "one_on_one";
+  if (/customer|client|sales call|discovery|demo|prospect|account review|qbr/.test(t)) return "customer_call";
+  if (/brainstorm|ideation|whiteboard|jam|workshop|design sprint/.test(t)) return "brainstorm";
+  if (/interview|screen call|candidate|onsite|hiring/.test(t)) return "interview";
+  if (/retro|retrospective|post.?mortem|debrief|postmortem/.test(t)) return "retro";
+  if (/all.?hands|town.?hall|company.?wide|quarterly review|ama/.test(t)) return "all_hands";
+  // Fallback heuristic: 2 people → 1:1, otherwise general
+  if (participantCount === 2) return "one_on_one";
+  return "general";
+}
+
+const TYPE_GUIDANCE: Record<MeetingType, string> = {
+  standup:
+    "This is a daily/weekly standup. Focus on what each person is working on, any blockers raised, and priority shifts. Structure the deck around people or workstreams, not time. Surface any cross-team dependencies. Skip small talk.",
+  one_on_one:
+    "This is a 1:1 between two people. Treat it as personal and coaching-oriented. Highlight career/growth topics, feedback given or received, commitments either person made, and emotional/relational notes if present. Be tactful — this deck may be re-read by both participants.",
+  customer_call:
+    "This is a customer or client call. Lead with the customer's goals, pain points, and any commitments our side made. Capture specific quotes from the customer verbatim (they're gold for product and sales). Include use cases, objections, competitors mentioned, and follow-up asks. Treat this as sales/account intelligence.",
+  brainstorm:
+    "This is a brainstorm or ideation session. The goal is capturing ideas, not decisions. Cluster ideas by theme, preserve the diverging creative energy, and don't over-summarize. Include wildcard ideas even if they didn't get traction. End with the most promising directions, not a single 'winner'.",
+  interview:
+    "This is an interview. Stay neutral and professional. Summarize the candidate's background, their strongest signal moments (both positive and concerning), specific answers to key questions, and open questions for next rounds. Do not make a hire/no-hire recommendation — that's the interviewer's call.",
+  retro:
+    "This is a retrospective or post-mortem. Structure the deck around: what went well, what didn't, what surprised us, and concrete process changes. For incidents, include a timeline and root cause. Explicit action items with owners are critical here.",
+  all_hands:
+    "This is an all-hands or town hall. Lead with announcements and strategic updates. Cluster Q&A by topic. Capture the overall tone (celebratory, anxious, informational). Skip redundant restating of slides the presenter showed.",
+  general:
+    "This is a general business meeting. Organize by theme, lead with decisions and outcomes, and extract concrete action items with owners.",
+};
+
 export async function generateMeetingBrief(
   segments: RecallTranscriptSegment[],
   meetingTitle: string,
   meetingDate: string,
-  participants: string[]
+  participants: string[],
+  meetingType?: MeetingType
 ): Promise<MeetingBrief> {
   if (!process.env.ANTHROPIC_API_KEY) {
     console.warn("ANTHROPIC_API_KEY not set, skipping LLM brief");
@@ -176,7 +220,13 @@ export async function generateMeetingBrief(
 
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+  const resolvedType: MeetingType = meetingType ?? detectMeetingType(meetingTitle, participants.length);
+  const typeGuidance = TYPE_GUIDANCE[resolvedType];
+
   const systemPrompt = `You are a senior strategist preparing a post-meeting brief. Your job is to turn a raw transcript into a crisp, insight-heavy analysis that will be rendered as a polished presentation deck.
+
+**Meeting type detected: ${resolvedType}**
+${typeGuidance}
 
 Write as a clear analyst, not a note-taker. Organize by theme, not chronology. Lead with WHY things matter, not just WHAT was said. Use the participants' actual words as quotes when they're pithy or load-bearing. Skip filler — no "we then talked about" summaries of summaries.
 
@@ -185,10 +235,11 @@ Return strict JSON with exactly these three fields, no prose outside the JSON:
 {
   "summary": "2-4 sentences. What was this meeting about, what got decided, and why does it matter? Not a retelling — a takeaway. Write for someone who wasn't there.",
   "actionItems": ["Each committed task, one per string. Include the owner if mentioned (e.g. \\"Alice: Ship the dashboard mockup by Friday\\"). Empty array if nothing actionable. Never invent."],
-  "gammaBrief": "A structured markdown document Gamma will turn into a presentation. Use H1 for the title, H2 for major sections. Target 8 sections that make great slides. Required sections:\\n\\n# {meeting title}\\n\\n## TL;DR\\n2-3 sentences on the biggest takeaway.\\n\\n## Key Decisions\\nBulleted, concrete. If no real decisions, say so honestly.\\n\\n## Action Items\\nBulleted with owners. If none, say 'No committed actions from this conversation.'\\n\\n## Core Themes\\nFor each major topic, a short heading and 2-4 sentences of insight. Use relevant direct quotes in italics with attribution. This is the meat of the deck.\\n\\n## Open Questions\\nThings raised but not resolved. What's still unknown.\\n\\n## Notable Quotes\\n2-4 memorable lines with speaker names. Pick ones that capture tone, insight, or tension.\\n\\n## Participants\\nAttendees and context on their roles if inferable.\\n\\n## Next Steps\\nForward-looking. What happens after this meeting — scheduled follow-ups, dependencies, etc."
+  "gammaBrief": "A structured markdown document Gamma will turn into a presentation. Use H1 for the title, H2 for major sections. Target 8 sections that make great slides. Use section structure that fits this meeting type — don't blindly follow a template if it doesn't fit. Default sections to include unless the type guidance above suggests otherwise: TL;DR, Key Decisions, Action Items, Core Themes (the meat — one sub-section per topic with insight and attributed quotes), Open Questions, Notable Quotes, Participants, Next Steps."
 }`;
 
   const userMessage = `Meeting: ${meetingTitle}
+Type: ${resolvedType}
 Date: ${meetingDate}
 Participants: ${participants.join(", ")}
 
