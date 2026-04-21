@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
 import { dateTint } from "@/lib/dateTint";
+import { DeleteWithConfirm } from "@/components/DeleteWithConfirm";
 
 interface Meeting {
   id: string;
@@ -32,12 +33,7 @@ type Classified = Meeting & {
 };
 
 export function MeetingRow({ meeting, onDeleted }: { meeting: Classified; onDeleted: (id: string) => void }) {
-  const [deleting, setDeleting] = useState(false);
-
-  const handleDelete = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDeleting(true);
+  const handleDelete = async () => {
     await fetch(`/api/meetings/${meeting.id}`, { method: "DELETE" });
     onDeleted(meeting.id);
   };
@@ -74,14 +70,10 @@ export function MeetingRow({ meeting, onDeleted }: { meeting: Classified; onDele
         </p>
       </div>
 
-      {/* Delete */}
-      <button
-        onClick={handleDelete}
-        disabled={deleting}
-        className="text-xs text-zinc-400 hover:text-red-400 transition-colors cursor-pointer disabled:opacity-50 shrink-0"
-      >
-        {deleting ? "…" : "✕"}
-      </button>
+      {/* Delete (with confirm step) */}
+      <div className="shrink-0" onClick={(e) => e.preventDefault()}>
+        <DeleteWithConfirm onConfirm={handleDelete} label="✕" />
+      </div>
     </>
   );
 

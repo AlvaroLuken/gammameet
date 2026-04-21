@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { MeetingRow } from "@/components/MeetingRow";
+import { DeleteWithConfirm } from "@/components/DeleteWithConfirm";
 import { dateTint } from "@/lib/dateTint";
 
 interface Meeting {
@@ -589,13 +590,13 @@ function MeetingCard({ meeting, onDeleted }: { meeting: Meeting & { _upcoming?: 
   const isInProgress = !!meeting._inProgress;
   const isGenerating = !!meeting._generating;
 
-  const handleDelete = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleConfirmedDelete = async () => {
     setDeleting(true);
     await fetch(`/api/meetings/${meeting.id}`, { method: "DELETE" });
     onDeleted(meeting.id);
   };
+  // Silence linter: deleting is tracked for completeness even though DeleteWithConfirm shows its own working state
+  void deleting;
 
   // Upcoming: bot scheduled, meeting hasn't started yet
   if (isUpcoming) {
@@ -609,9 +610,7 @@ function MeetingCard({ meeting, onDeleted }: { meeting: Meeting & { _upcoming?: 
           <p className="text-zinc-500 dark:text-zinc-400 text-xs">{formatTime(meeting.start_time)}</p>
           <div className="mt-auto pt-2 flex items-center justify-between">
             <span className="text-xs text-zinc-400">Scheduled · Bot ready</span>
-            <button onClick={handleDelete} disabled={deleting} className="text-xs text-zinc-400 hover:text-red-400 transition-colors cursor-pointer disabled:opacity-50">
-              {deleting ? "Removing…" : "Remove"}
-            </button>
+            <DeleteWithConfirm onConfirm={handleConfirmedDelete} label="Remove" />
           </div>
         </div>
       </div>
@@ -634,9 +633,7 @@ function MeetingCard({ meeting, onDeleted }: { meeting: Meeting & { _upcoming?: 
           <p className="text-zinc-500 dark:text-zinc-400 text-xs">{formatTime(meeting.start_time)}</p>
           <div className="mt-auto pt-2 flex items-center justify-between">
             <span className="text-xs text-zinc-500 dark:text-zinc-400">Jim is joining — please admit</span>
-            <button onClick={handleDelete} disabled={deleting} className="text-xs text-zinc-400 hover:text-red-400 transition-colors cursor-pointer disabled:opacity-50">
-              {deleting ? "Removing…" : "Remove"}
-            </button>
+            <DeleteWithConfirm onConfirm={handleConfirmedDelete} label="Remove" />
           </div>
         </div>
       </div>
@@ -658,9 +655,7 @@ function MeetingCard({ meeting, onDeleted }: { meeting: Meeting & { _upcoming?: 
           <p className="text-zinc-500 dark:text-zinc-400 text-xs">{formatTime(meeting.start_time)}</p>
           <div className="mt-auto pt-2 flex items-center justify-between">
             <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Meeting in progress</span>
-            <button onClick={handleDelete} disabled={deleting} className="text-xs text-zinc-400 hover:text-red-400 transition-colors cursor-pointer disabled:opacity-50">
-              {deleting ? "Removing…" : "Remove"}
-            </button>
+            <DeleteWithConfirm onConfirm={handleConfirmedDelete} label="Remove" />
           </div>
         </div>
       </div>
@@ -679,9 +674,7 @@ function MeetingCard({ meeting, onDeleted }: { meeting: Meeting & { _upcoming?: 
           <p className="text-zinc-500 dark:text-zinc-400 text-xs">{formatTime(meeting.start_time)}</p>
           <div className="mt-auto pt-2 flex items-center justify-between">
             <span className="text-xs font-medium text-violet-500">Generating deck · ~1 min</span>
-            <button onClick={handleDelete} disabled={deleting} className="text-xs text-zinc-400 hover:text-red-400 transition-colors cursor-pointer disabled:opacity-50">
-              {deleting ? "Deleting…" : "Delete"}
-            </button>
+            <DeleteWithConfirm onConfirm={handleConfirmedDelete} label="Delete" />
           </div>
         </div>
       </div>
@@ -748,9 +741,7 @@ function FailedCard({ meeting, onDeleted }: { meeting: Meeting & { failure_reaso
           ) : (
             <span className="text-xs text-zinc-400">Can't retry this one</span>
           )}
-          <button onClick={handleDelete} disabled={deleting || retrying} className="text-xs text-zinc-400 hover:text-red-400 transition-colors cursor-pointer disabled:opacity-50">
-            {deleting ? "Deleting…" : "Delete"}
-          </button>
+          <DeleteWithConfirm onConfirm={handleDelete} label="Delete" />
         </div>
       </div>
     </div>
