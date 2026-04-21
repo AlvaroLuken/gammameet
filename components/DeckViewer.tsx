@@ -16,6 +16,10 @@ export function DeckViewer({ exportUrl }: { exportUrl: string }) {
   const [loadFailed, setLoadFailed] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  // Suppresses observer updates while a programmatic scroll is in flight,
+  // so flicking from slide 2 → 7 doesn't briefly highlight every slide in between.
+  const isJumpingRef = useRef(false);
+  const jumpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Route the PDF through our own origin so PDF.js can fetch without CORS issues
   const fileUrl = `/api/deck-proxy?url=${encodeURIComponent(exportUrl)}`;
@@ -51,6 +55,7 @@ export function DeckViewer({ exportUrl }: { exportUrl: string }) {
     if (numPages === 0) return;
     const observer = new IntersectionObserver(
       (entries) => {
+        if (isJumpingRef.current) return; // ignore updates during programmatic scroll
         for (const entry of entries) {
           if (!entry.isIntersecting) continue;
           const pageAttr = (entry.target as HTMLElement).dataset.page;
@@ -73,11 +78,16 @@ export function DeckViewer({ exportUrl }: { exportUrl: string }) {
   }, []);
 
   const jumpToPage = (n: number) => {
-    // Optimistically set active page so the rail responds instantly;
-    // observer will confirm (or correct) after scroll settles.
     setCurrentPage(n);
+    isJumpingRef.current = true;
+    if (jumpTimerRef.current) clearTimeout(jumpTimerRef.current);
     const el = pageRefs.current.get(n);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    // Smooth scroll to a far page takes ~300-700ms; release the lock after a
+    // comfortable buffer so user scrolls re-take control of the rail state.
+    jumpTimerRef.current = setTimeout(() => {
+      isJumpingRef.current = false;
+    }, 800);
   };
 
   return (
