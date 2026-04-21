@@ -16,10 +16,11 @@ function letterAvatar(str: string) {
 }
 
 export default async function MeetingPage({ params }: { params: Promise<{ id: string }> }) {
-  const session = await auth();
-  if (!session) redirect("/");
-
   const { id } = await params;
+  const session = await auth();
+
+  // Non-authed visitors — send them to the public share view so email links still work
+  if (!session) redirect(`/share/${id}`);
 
   const { data: meeting } = await supabase
     .from("meetings")
@@ -30,6 +31,10 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
   if (!meeting) redirect("/dashboard");
 
   const attendees: string[] = meeting.meeting_invites?.map((i: { email: string }) => i.email) ?? [];
+
+  // Authed but not an attendee — fall back to the public share view
+  const isAttendee = !!session.user.email && attendees.includes(session.user.email);
+  if (!isAttendee) redirect(`/share/${id}`);
 
   return (
     <div className="min-h-screen md:h-screen flex flex-col bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white md:overflow-hidden">
