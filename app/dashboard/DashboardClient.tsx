@@ -683,7 +683,7 @@ function MeetingCard({ meeting, onDeleted }: { meeting: Meeting & { _upcoming?: 
           <p className="font-semibold text-zinc-900 dark:text-white leading-snug line-clamp-2">{meeting.title}</p>
           <p className="text-zinc-500 dark:text-zinc-400 text-xs">{formatTime(meeting.start_time)}</p>
           <div className="mt-auto pt-2 flex items-center justify-between">
-            <span className="text-xs text-violet-400">Generating deck…</span>
+            <span className="text-xs font-medium text-violet-500">Generating deck · ~1 min</span>
             <button onClick={handleDelete} disabled={deleting} className="text-xs text-zinc-400 hover:text-red-400 transition-colors cursor-pointer disabled:opacity-50">
               {deleting ? "Deleting…" : "Delete"}
             </button>

@@ -42,7 +42,7 @@ export default async function ProfilePage() {
 
   const dashboardPrefs = {
     showUpcoming: true,
-    showProcessing: false,
+    showProcessing: true,
     showFailed: false,
     shareMode: "all_attendees" as const,
     ...(userData?.dashboard_prefs ?? {}),
