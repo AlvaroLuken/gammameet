@@ -29,9 +29,10 @@ export function DeckViewer({ exportUrl }: { exportUrl: string }) {
         ))}
       </div>
 
-      {/* Main deck */}
+      {/* Main deck — `key` forces remount when page changes so PDF viewer re-reads the #page fragment */}
       <div className="flex-1 min-w-0">
         <iframe
+          key={page}
           src={src}
           className="w-full rounded-xl border-0"
           style={{ height: "min(calc(100vh - 120px), 80vw)" }}
