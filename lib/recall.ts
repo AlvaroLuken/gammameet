@@ -274,15 +274,42 @@ ${text}`;
     const match = content.text.match(/\{[\s\S]*\}/);
     const parsed = JSON.parse(match ? match[0] : content.text);
     const actions: string[] = Array.isArray(parsed.actionItems) ? parsed.actionItems : [];
-    return {
-      summary: String(parsed.summary ?? "").trim(),
-      actionItems: actions.map((a) => "· " + a).join("\n"),
-      gammaBrief: String(parsed.gammaBrief ?? "").trim(),
-    };
+    const summary = String(parsed.summary ?? "").trim();
+    const gammaBrief = String(parsed.gammaBrief ?? "").trim();
+
+    // Fallback: if Claude returned an empty actionItems array but wrote them
+    // under "## Action Items" in gammaBrief, extract them from there.
+    let actionItems = actions.map((a) => "· " + a).join("\n");
+    if (!actionItems && gammaBrief) {
+      const extracted = extractActionItemsFromMarkdown(gammaBrief);
+      if (extracted.length > 0) {
+        actionItems = extracted.map((a) => "· " + a).join("\n");
+        console.log(`[brief] Extracted ${extracted.length} action items from markdown fallback`);
+      }
+    }
+
+    console.log(`[brief] Claude returned: summary=${summary.length}ch, actionItems=${actions.length}, gammaBrief=${gammaBrief.length}ch`);
+    return { summary, actionItems, gammaBrief };
   } catch (err) {
     console.error("Failed to parse Claude brief response:", err, content.text);
     return { summary: "", actionItems: "", gammaBrief: "" };
   }
+}
+
+function extractActionItemsFromMarkdown(md: string): string[] {
+  // Find "## Action Items" section and pull its bullet/list lines
+  const lines = md.split("\n");
+  const sectionIdx = lines.findIndex((l) => /^##\s+action items/i.test(l.trim()));
+  if (sectionIdx === -1) return [];
+  const items: string[] = [];
+  for (let i = sectionIdx + 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line.startsWith("##")) break; // next section
+    const m = line.match(/^[-*·•]\s+(.+)$/);
+    if (m) items.push(m[1].trim());
+  }
+  // Filter out placeholder lines like "No committed actions from this conversation."
+  return items.filter((it) => !/^no (committed )?actions?/i.test(it) && it.length > 3);
 }
 
 // Back-compat wrapper

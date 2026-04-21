@@ -7,7 +7,8 @@ import { MeetingTime } from "@/components/MeetingTime";
 import Image from "next/image";
 import { ActionsMenu } from "@/components/ActionsMenu";
 import { ExpandableText } from "@/components/ExpandableText";
-import { DeckViewer } from "@/components/DeckViewer";
+import { DeckWithRegenOverlay } from "@/components/DeckWithRegenOverlay";
+import { MeetingRegenProvider } from "@/components/MeetingRegenContext";
 
 function letterAvatar(str: string) {
   const colors = ["bg-violet-500", "bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-rose-500", "bg-cyan-500", "bg-pink-500", "bg-orange-500"];
@@ -38,6 +39,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
   if (!isAttendee) redirect(`/share/${id}`);
 
   return (
+    <MeetingRegenProvider>
     <div className="min-h-screen md:h-screen flex flex-col bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white md:overflow-hidden">
       {/* Header */}
       <header className="shrink-0 border-b border-zinc-200 dark:border-zinc-800 px-6 py-4 flex items-center justify-between">
@@ -108,7 +110,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
             <>
               {/* Desktop: deck viewer with slide rail */}
               <div className="hidden md:block">
-                <DeckViewer exportUrl={meeting.export_url} />
+                <DeckWithRegenOverlay exportUrl={meeting.export_url} />
               </div>
               {/* Mobile: tap-to-open preview (PDF <embed> can't scroll pages on iOS Safari) */}
               <a
@@ -170,5 +172,6 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
         </main>
       </div>
     </div>
+    </MeetingRegenProvider>
   );
 }

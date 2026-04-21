@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useMeetingRegen } from "./MeetingRegenContext";
 
 interface Props {
   id: string;
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export function ActionsMenu({ id, gammaUrl, exportUrl, title }: Props) {
+  const { setRegenerating: setCtxRegenerating } = useMeetingRegen();
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -18,6 +20,7 @@ export function ActionsMenu({ id, gammaUrl, exportUrl, title }: Props) {
   const [downloading, setDownloading] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [regenError, setRegenError] = useState<string | null>(null);
+  const [confirmingRegen, setConfirmingRegen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -26,6 +29,7 @@ export function ActionsMenu({ id, gammaUrl, exportUrl, title }: Props) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setOpen(false);
         setConfirming(false);
+        setConfirmingRegen(false);
       }
     }
     if (open) document.addEventListener("mousedown", onClickOutside);
@@ -48,12 +52,16 @@ export function ActionsMenu({ id, gammaUrl, exportUrl, title }: Props) {
     if (regenerating) return;
     setRegenError(null);
     setRegenerating(true);
+    setOpen(false);
+    setCtxRegenerating(true);
     try {
       const res = await fetch(`/api/meetings/${id}/regenerate`, { method: "POST" });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         setRegenError(body.error ?? "Regenerate failed");
         setRegenerating(false);
+        // Reload so the old deck shows again instead of the loading state
+        window.location.reload();
         return;
       }
       // Success — reload to show the fresh deck + summary/action items
@@ -62,6 +70,7 @@ export function ActionsMenu({ id, gammaUrl, exportUrl, title }: Props) {
     } catch {
       setRegenError("Regenerate failed");
       setRegenerating(false);
+      window.location.reload();
     }
   };
 
@@ -137,14 +146,35 @@ export function ActionsMenu({ id, gammaUrl, exportUrl, title }: Props) {
             {copied ? "Link copied!" : "Copy share link"}
           </button>
 
-          <button
-            onClick={handleRegenerate}
-            disabled={regenerating}
-            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-t border-zinc-100 dark:border-zinc-800 cursor-pointer disabled:opacity-50"
-          >
-            <span className="text-violet-500">↻</span>
-            {regenerating ? "Regenerating…" : "Regenerate deck"}
-          </button>
+          <div className="border-t border-zinc-100 dark:border-zinc-800">
+            {confirmingRegen ? (
+              <div className="flex gap-2 p-2">
+                <button
+                  onClick={() => { setConfirmingRegen(false); handleRegenerate(); }}
+                  disabled={regenerating}
+                  className="flex-1 inline-flex items-center justify-center bg-violet-600 hover:bg-violet-500 text-white text-xs font-medium px-3 py-2 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {regenerating ? "Regenerating…" : "Confirm regenerate"}
+                </button>
+                <button
+                  onClick={() => setConfirmingRegen(false)}
+                  disabled={regenerating}
+                  className="inline-flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 text-xs px-3 py-2 rounded-lg transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => { setConfirmingRegen(true); setConfirming(false); }}
+                disabled={regenerating}
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                <span className="text-violet-500">↻</span>
+                {regenerating ? "Regenerating…" : "Regenerate deck"}
+              </button>
+            )}
+          </div>
           {regenError && (
             <p className="px-4 pb-2 text-xs text-red-500 border-t border-zinc-100 dark:border-zinc-800">{regenError}</p>
           )}
