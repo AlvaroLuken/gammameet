@@ -83,14 +83,18 @@ export async function scheduleBotsForUser(userId: string, userEmail: string, acc
       title: string;
       bot_status: string | null;
       calendar_event_id?: string | null;
+      dismissed_at?: string | null;
     } | null = null;
 
     const { data: byEventId } = await supabase
       .from("meetings")
-      .select("id, recall_bot_id, start_time, end_time, title, bot_status, calendar_event_id")
+      .select("id, recall_bot_id, start_time, end_time, title, bot_status, calendar_event_id, dismissed_at")
       .eq("calendar_event_id", m.id)
       .maybeSingle();
     existing = byEventId;
+
+    // User explicitly dismissed this event — don't re-insert or reschedule
+    if (existing?.dismissed_at) continue;
 
     if (!existing) {
       const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();

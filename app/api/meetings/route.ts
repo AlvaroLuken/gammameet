@@ -29,6 +29,7 @@ export async function GET() {
     .select("*, meeting_invites(email)")
     .in("id", ids)
     .not("recall_bot_id", "is", null)
+    .is("dismissed_at", null)
     .order("start_time", { ascending: false });
 
   // Show completed decks always; show pending/upcoming only within a 6-hour window
