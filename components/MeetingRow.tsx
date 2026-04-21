@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { dateTint } from "@/lib/dateTint";
-import { DeleteWithConfirm } from "@/components/DeleteWithConfirm";
 
 interface Meeting {
   id: string;
@@ -39,7 +38,7 @@ export function MeetingRow({ meeting, onDeleted }: { meeting: Classified; onDele
   };
 
   const status = describeStatus(meeting);
-  const clickable = meeting._ready;
+  const clickable = !!meeting._ready;
   const tint = meeting._ready ? dateTint(meeting.start_time) : null;
   const rowClass = `group flex items-center gap-4 bg-white dark:bg-zinc-900 border ${status.borderClass} rounded-xl px-4 py-3 transition-colors ${
     clickable ? "hover:border-violet-400 dark:hover:border-violet-600 cursor-pointer" : ""
@@ -70,10 +69,8 @@ export function MeetingRow({ meeting, onDeleted }: { meeting: Classified; onDele
         </p>
       </div>
 
-      {/* Delete (with confirm step) */}
-      <div className="shrink-0" onClick={(e) => e.preventDefault()}>
-        <DeleteWithConfirm onConfirm={handleDelete} label="✕" />
-      </div>
+      {/* 3-dot menu — matches the grid card's menu (View Deck + Delete for ready, Delete for others) */}
+      <RowMenu meetingId={meeting.id} isReady={clickable} onDelete={handleDelete} />
     </>
   );
 
@@ -81,6 +78,88 @@ export function MeetingRow({ meeting, onDeleted }: { meeting: Classified; onDele
     <Link href={`/meetings/${meeting.id}`} className={rowClass}>{Body}</Link>
   ) : (
     <div className={rowClass}>{Body}</div>
+  );
+}
+
+function RowMenu({ meetingId, isReady, onDelete }: { meetingId: string; isReady: boolean; onDelete: () => Promise<void> }) {
+  const [open, setOpen] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setConfirming(false);
+      }
+    }
+    if (open) document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [open]);
+
+  const handleDeleteClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDeleting(true);
+    await onDelete();
+  };
+
+  return (
+    <div ref={menuRef} className="relative shrink-0" onClick={(e) => e.preventDefault()}>
+      <button
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setOpen((o) => !o);
+          setConfirming(false);
+        }}
+        className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors cursor-pointer"
+      >
+        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+          <circle cx="5" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="19" cy="12" r="1.5" />
+        </svg>
+      </button>
+      {open && (
+        <div className="absolute top-full right-0 mt-1 w-40 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden z-50">
+          {isReady && (
+            <Link
+              href={`/meetings/${meetingId}`}
+              className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="text-violet-500">↗</span> View Deck
+            </Link>
+          )}
+          <div className={isReady ? "border-t border-zinc-100 dark:border-zinc-800" : ""}>
+            {confirming ? (
+              <div className="flex gap-1.5 p-2">
+                <button
+                  onClick={handleDeleteClick}
+                  disabled={deleting}
+                  className="flex-1 text-xs bg-red-600 hover:bg-red-500 text-white font-medium py-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {deleting ? "…" : "Confirm"}
+                </button>
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirming(false); }}
+                  className="flex-1 text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 py-1.5 rounded-lg transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setConfirming(true); }}
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
+              >
+                <span>✕</span> Delete
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
