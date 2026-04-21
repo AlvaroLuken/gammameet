@@ -38,6 +38,17 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Stuck claim/processing recovery: if a worker died mid-flight, release the
+  // claim so a future run can retry. Meetings older than 15 min in "claiming"
+  // or "processing" with no gamma_url are clearly stuck.
+  const fifteenMinAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+  await supabase
+    .from("meetings")
+    .update({ bot_status: null })
+    .in("bot_status", ["claiming", "processing"])
+    .is("gamma_url", null)
+    .lt("start_time", fifteenMinAgo);
+
   // Sweep: mark stale meetings as failed
   // A meeting is "stale" if: bot was scheduled, start_time > 2h ago,
   // no deck generated, and not already marked failed.

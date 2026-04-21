@@ -91,11 +91,34 @@ export async function POST(req: NextRequest) {
     { onConflict: "meeting_id,email" }
   );
 
+  // Atomic claim: prevents concurrent /api/add-bot calls (double-click, retries)
+  // from both creating a Recall bot. Only the first caller whose UPDATE affects a row proceeds.
+  const { data: claim } = await supabase
+    .from("meetings")
+    .update({ bot_status: "claiming" })
+    .eq("id", meetingId)
+    .is("recall_bot_id", null)
+    .is("bot_status", null)
+    .select("id")
+    .maybeSingle();
+
+  if (!claim) {
+    // Someone else got in first. Return whatever bot they created.
+    const { data: existingBot } = await supabase
+      .from("meetings")
+      .select("recall_bot_id")
+      .eq("id", meetingId)
+      .maybeSingle();
+    return NextResponse.json({ ok: true, botId: existingBot?.recall_bot_id, alreadyScheduled: true, meetingId });
+  }
+
   try {
     const botId = await createBot({ meetingUrl, meetingId });
     await supabase.from("meetings").update({ recall_bot_id: botId, bot_status: "scheduled" }).eq("id", meetingId);
     return NextResponse.json({ ok: true, botId, meetingId });
   } catch (err) {
+    // Release the claim so a future retry can succeed
+    await supabase.from("meetings").update({ bot_status: null }).eq("id", meetingId);
     return NextResponse.json({ error: `Recall error: ${String(err)}` }, { status: 500 });
   }
 }

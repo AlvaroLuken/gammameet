@@ -223,9 +223,14 @@ async function processMeeting(
       }).catch((err) => console.error("Email send failed:", err));
     }
 
+    // Flip bot_status back to "ended" so the lifecycle is clean
+    await supabase.from("meetings").update({ bot_status: "ended" }).eq("id", meeting.id);
+
     console.log(`Recall: processed "${title}" → ${gammaUrl}`);
     return NextResponse.json({ received: true });
   } catch (err) {
+    // Release the processing claim so future retries can succeed
+    await supabase.from("meetings").update({ bot_status: "ended" }).eq("id", meeting.id);
     console.error("Recall processing failed:", err);
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
