@@ -59,7 +59,7 @@ export default async function BetaAccessPage({ searchParams }: { searchParams: P
                 <div className="min-w-0">
                   <p className="font-semibold text-base">I need beta access</p>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
-                    Use the contact form at al-luken.space. Include your Google email + mention GammaMeet. Usually approved within a day.
+                    Use the contact form at al-luken.space. Include your Google email + mention GammaMeet. Usually approved within a few hours!
                   </p>
                 </div>
                 <span className="text-violet-500 text-xl group-hover:translate-x-0.5 transition-transform shrink-0">→</span>
@@ -89,7 +89,7 @@ export default async function BetaAccessPage({ searchParams }: { searchParams: P
           </div>
 
           <p className="text-xs text-zinc-400 dark:text-zinc-500 pt-2">
-            Not sure? Email updates from <span className="font-medium text-zinc-600 dark:text-zinc-300">hello@al-luken.space</span> will confirm when you've been added.
+            Not sure if you've been added? Click Sign in — if Google lets you through, you're on the list.
           </p>
         </div>
       </section>
