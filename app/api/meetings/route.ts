@@ -24,12 +24,13 @@ export async function GET() {
   const ids = (invites ?? []).map((r) => r.meeting_id);
   if (ids.length === 0) return NextResponse.json([]);
 
+  // Return all non-failed meetings — the client applies the dismissed_at
+  // filter based on the user's "show hidden" preference.
   const { data: meetings } = await supabase
     .from("meetings")
     .select("*, meeting_invites(email)")
     .in("id", ids)
     .not("recall_bot_id", "is", null)
-    .is("dismissed_at", null)
     .order("start_time", { ascending: false });
 
   // Show completed decks always; show pending/upcoming only within a 6-hour window

@@ -16,6 +16,7 @@ interface Meeting {
   transcript_error: boolean | null;
   bot_status: string | null;
   failure_reason: string | null;
+  dismissed_at: string | null;
 }
 
 function formatTime(iso: string) {
@@ -29,12 +30,14 @@ type Classified = Meeting & {
   _generating?: boolean;
   _failed?: boolean;
   _ready?: boolean;
+  _botDisabled?: boolean;
+  _hidden?: boolean;
 };
 
-export function MeetingRow({ meeting, onDeleted }: { meeting: Classified; onDeleted: (id: string) => void }) {
+export function MeetingRow({ meeting, onChange }: { meeting: Classified; onChange: () => void | Promise<void> }) {
   const handleDelete = async () => {
     await fetch(`/api/meetings/${meeting.id}`, { method: "DELETE" });
-    onDeleted(meeting.id);
+    await onChange();
   };
 
   const status = describeStatus(meeting);
@@ -171,6 +174,22 @@ function describeStatus(m: Classified): {
   thumbBg: string;
   borderClass: string;
 } {
+  if (m._hidden) return {
+    label: "Hidden",
+    icon: "👁",
+    iconClass: "text-lg opacity-20",
+    labelClass: "text-zinc-400",
+    thumbBg: "bg-zinc-100 dark:bg-zinc-800",
+    borderClass: "border-zinc-200 dark:border-zinc-800",
+  };
+  if (m._botDisabled) return {
+    label: "Bot cancelled",
+    icon: "🔕",
+    iconClass: "text-lg opacity-30",
+    labelClass: "text-zinc-400",
+    thumbBg: "bg-zinc-100 dark:bg-zinc-800",
+    borderClass: "border-zinc-200 dark:border-zinc-800",
+  };
   if (m._ready) return {
     label: "Deck ready",
     icon: "✦",

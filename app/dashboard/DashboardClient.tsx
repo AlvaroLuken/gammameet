@@ -20,6 +20,7 @@ interface Meeting {
   transcript_error: boolean | null;
   bot_status: string | null;
   failure_reason: string | null;
+  dismissed_at: string | null;
   meeting_invites?: { email: string }[];
 }
 
@@ -117,6 +118,7 @@ export default function DashboardClient({ user }: { user: User }) {
   const [showUpcoming, setShowUpcoming] = useState(false);
   const [showProcessing, setShowProcessing] = useState(false);
   const [showFailed, setShowFailed] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   // Load view preference from localStorage
@@ -137,15 +139,22 @@ export default function DashboardClient({ user }: { user: User }) {
         setShowUpcoming(p.showUpcoming ?? false);
         setShowProcessing(p.showProcessing ?? false);
         setShowFailed(p.showFailed ?? false);
+        setShowHidden(p.showHidden ?? false);
       })
       .catch(() => {});
   }, []);
 
+  const refresh = async () => {
+    const data = await fetchMeetings();
+    setMeetings(data);
+  };
+
   useEffect(() => {
-    // Include bot_status so live state transitions (recording → ended, etc.)
-    // trigger a re-render immediately.
+    // Include bot_status + dismissed_at so live state transitions trigger a re-render.
     const hash = (data: Meeting[]) =>
-      data.map((m) => `${m.id}:${m.gamma_url ?? ""}:${m.transcript_error ? "1" : "0"}:${m.bot_status ?? ""}`).join("|");
+      data
+        .map((m) => `${m.id}:${m.gamma_url ?? ""}:${m.transcript_error ? "1" : "0"}:${m.bot_status ?? ""}:${m.dismissed_at ?? ""}`)
+        .join("|");
     let prev = "";
 
     const poll = async () => {
@@ -155,8 +164,6 @@ export default function DashboardClient({ user }: { user: User }) {
         setMeetings(data);
         prev = next;
       } else {
-        // Force a re-render anyway so time-window-based classification (e.g.
-        // upcoming → in-progress at startMs) updates without a page reload.
         setMeetings((prev) => [...prev]);
       }
     };
@@ -193,6 +200,8 @@ export default function DashboardClient({ user }: { user: User }) {
     const isReady = !!m.gamma_url;
     const botFailed = status === "failed" || !!m.transcript_error;
     const hasBot = !!m.recall_bot_id;
+    const isHidden = !!m.dismissed_at;
+    const isBotDisabled = !isReady && !botFailed && status === "disabled";
 
     // Bot-status is the only reliable signal for "generating" — a scheduled
     // end time tells us nothing because meetings run over. We only switch to
@@ -211,7 +220,8 @@ export default function DashboardClient({ user }: { user: User }) {
     const botEverJoined = status === "recording" || status === "ended";
 
     // Before meeting start, not yet joining (treat "claiming" same as scheduled — transient state during bot creation)
-    const isUpcoming = !isReady && !botFailed && !botEverJoined && startMs > now && (status === "scheduled" || status === "claiming");
+    const isUpcoming =
+      !isReady && !botFailed && !isBotDisabled && !botEverJoined && startMs > now && (status === "scheduled" || status === "claiming");
 
     // Bot is en route (joining, in waiting room) before meeting or at its start
     const isJoining = !isReady && !botFailed && status === "joining";
@@ -233,13 +243,16 @@ export default function DashboardClient({ user }: { user: User }) {
       _generating: isGenerating,
       _failed: isFailed,
       _ready: isReady,
+      _botDisabled: isBotDisabled,
+      _hidden: isHidden,
     };
   });
 
-  // Apply status filter first
+  // Apply status filter first. Hidden meetings are excluded unless showHidden is on.
   const statusFiltered = classified.filter((m) => {
+    if (m._hidden && !showHidden) return false;
     if (m._ready) return true;
-    if ((m._upcoming || m._joining) && showUpcoming) return true;
+    if ((m._upcoming || m._joining || m._botDisabled) && showUpcoming) return true;
     if ((m._inProgress || m._generating) && showProcessing) return true;
     if (m._failed && showFailed) return true;
     return false;
@@ -564,11 +577,11 @@ export default function DashboardClient({ user }: { user: User }) {
                     </div>
                     {viewMode === "grid" ? (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {ms.map((m) => <MeetingCard key={m.id} meeting={m} onDeleted={(id) => setMeetings((prev) => prev.filter((x) => x.id !== id))} />)}
+                        {ms.map((m) => <MeetingCard key={m.id} meeting={m} onChange={refresh} />)}
                       </div>
                     ) : (
                       <div className="flex flex-col gap-2">
-                        {ms.map((m) => <MeetingRow key={m.id} meeting={m} onDeleted={(id) => setMeetings((prev) => prev.filter((x) => x.id !== id))} />)}
+                        {ms.map((m) => <MeetingRow key={m.id} meeting={m} onChange={refresh} />)}
                       </div>
                     )}
                   </div>
@@ -582,7 +595,7 @@ export default function DashboardClient({ user }: { user: User }) {
   );
 }
 
-function MeetingCard({ meeting, onDeleted }: { meeting: Meeting & { _upcoming?: boolean; _joining?: boolean; _inProgress?: boolean; _generating?: boolean; _failed?: boolean }; onDeleted: (id: string) => void }) {
+function MeetingCard({ meeting, onChange }: { meeting: Meeting & { _upcoming?: boolean; _joining?: boolean; _inProgress?: boolean; _generating?: boolean; _failed?: boolean; _botDisabled?: boolean; _hidden?: boolean }; onChange: () => void | Promise<void> }) {
   const duration = meeting.end_time ? durationMins(meeting.start_time, meeting.end_time) : null;
   const [deleting, setDeleting] = useState(false);
 
@@ -591,14 +604,69 @@ function MeetingCard({ meeting, onDeleted }: { meeting: Meeting & { _upcoming?: 
   const isFailed = !!meeting._failed;
   const isInProgress = !!meeting._inProgress;
   const isGenerating = !!meeting._generating;
+  const isBotDisabled = !!meeting._botDisabled;
+  const isHidden = !!meeting._hidden;
 
   const handleConfirmedDelete = async () => {
     setDeleting(true);
     await fetch(`/api/meetings/${meeting.id}`, { method: "DELETE" });
-    onDeleted(meeting.id);
+    await onChange();
   };
-  // Silence linter: deleting is tracked for completeness even though DeleteWithConfirm shows its own working state
+  const handleCancelBot = async () => {
+    await fetch(`/api/meetings/${meeting.id}/cancel-bot`, { method: "POST" });
+    await onChange();
+  };
+  const handleEnableBot = async () => {
+    await fetch(`/api/meetings/${meeting.id}/enable-bot`, { method: "POST" });
+    await onChange();
+  };
+  const handleUnhide = async () => {
+    await fetch(`/api/meetings/${meeting.id}/unhide`, { method: "POST" });
+    await onChange();
+  };
   void deleting;
+
+  // Hidden: user previously dismissed this meeting (only shown when showHidden is on)
+  if (isHidden) {
+    return (
+      <div className="flex flex-col bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden opacity-60 hover:opacity-100 transition-opacity">
+        <div className="w-full aspect-video bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+          <span className="text-3xl opacity-20">👁</span>
+        </div>
+        <div className="flex flex-col gap-1.5 p-4 flex-1">
+          <p className="font-semibold text-zinc-900 dark:text-white leading-snug line-clamp-2">{meeting.title}</p>
+          <p className="text-zinc-500 dark:text-zinc-400 text-xs">{formatTime(meeting.start_time)}</p>
+          <div className="mt-auto pt-2 flex items-center justify-between">
+            <span className="text-xs text-zinc-400">Hidden</span>
+            <button onClick={(e) => { e.preventDefault(); handleUnhide(); }} className="text-xs font-semibold text-violet-500 hover:text-violet-400 transition-colors cursor-pointer">
+              Unhide
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Bot disabled: user cancelled the bot but kept the meeting
+  if (isBotDisabled) {
+    return (
+      <div className="flex flex-col bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden opacity-80">
+        <div className="w-full aspect-video bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+          <span className="text-3xl opacity-20">🔕</span>
+        </div>
+        <div className="flex flex-col gap-1.5 p-4 flex-1">
+          <p className="font-semibold text-zinc-900 dark:text-white leading-snug line-clamp-2">{meeting.title}</p>
+          <p className="text-zinc-500 dark:text-zinc-400 text-xs">{formatTime(meeting.start_time)}</p>
+          <div className="mt-auto pt-2 flex items-center justify-between gap-2">
+            <button onClick={(e) => { e.preventDefault(); handleEnableBot(); }} className="text-xs font-semibold text-violet-500 hover:text-violet-400 transition-colors cursor-pointer">
+              Enable bot
+            </button>
+            <DeleteWithConfirm onConfirm={handleConfirmedDelete} label="Hide" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Upcoming: bot scheduled, meeting hasn't started yet
   if (isUpcoming) {
@@ -610,9 +678,15 @@ function MeetingCard({ meeting, onDeleted }: { meeting: Meeting & { _upcoming?: 
         <div className="flex flex-col gap-1.5 p-4 flex-1">
           <p className="font-semibold text-zinc-900 dark:text-white leading-snug line-clamp-2">{meeting.title}</p>
           <p className="text-zinc-500 dark:text-zinc-400 text-xs">{formatTime(meeting.start_time)}</p>
-          <div className="mt-auto pt-2 flex items-center justify-between">
+          <div className="mt-auto pt-2 flex items-center justify-between gap-2">
             <span className="text-xs text-zinc-400">Scheduled · Bot ready</span>
-            <DeleteWithConfirm onConfirm={handleConfirmedDelete} label="Remove" />
+            <div className="flex items-center gap-2">
+              <button onClick={(e) => { e.preventDefault(); handleCancelBot(); }} className="text-xs text-zinc-400 hover:text-red-400 transition-colors cursor-pointer">
+                Cancel bot
+              </button>
+              <span className="text-zinc-300 dark:text-zinc-600 text-xs">·</span>
+              <DeleteWithConfirm onConfirm={handleConfirmedDelete} label="Hide" />
+            </div>
           </div>
         </div>
       </div>
@@ -686,16 +760,16 @@ function MeetingCard({ meeting, onDeleted }: { meeting: Meeting & { _upcoming?: 
 
   // Failed: transcript failed or timed out
   if (isFailed) {
-    return <FailedCard meeting={meeting} onDeleted={onDeleted} />;
+    return <FailedCard meeting={meeting} onChange={onChange} />;
   }
 
   // Ready: deck generated
   return (
-    <CardMenu id={meeting.id} title={meeting.title} startTime={meeting.start_time} previewImage={meeting.preview_image} duration={duration} tint={dateTint(meeting.start_time)} onDeleted={onDeleted} />
+    <CardMenu id={meeting.id} title={meeting.title} startTime={meeting.start_time} previewImage={meeting.preview_image} duration={duration} tint={dateTint(meeting.start_time)} onChange={onChange} />
   );
 }
 
-function FailedCard({ meeting, onDeleted }: { meeting: Meeting & { failure_reason: string | null }; onDeleted: (id: string) => void }) {
+function FailedCard({ meeting, onChange }: { meeting: Meeting & { failure_reason: string | null }; onChange: () => void | Promise<void> }) {
   const [deleting, setDeleting] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [retryError, setRetryError] = useState<string | null>(null);
@@ -706,7 +780,7 @@ function FailedCard({ meeting, onDeleted }: { meeting: Meeting & { failure_reaso
   const handleDelete = async () => {
     setDeleting(true);
     await fetch(`/api/meetings/${meeting.id}`, { method: "DELETE" });
-    onDeleted(meeting.id);
+    await onChange();
   };
 
   const handleRetry = async () => {
@@ -750,14 +824,14 @@ function FailedCard({ meeting, onDeleted }: { meeting: Meeting & { failure_reaso
   );
 }
 
-function CardMenu({ id, title, startTime, previewImage, duration, tint, onDeleted }: {
+function CardMenu({ id, title, startTime, previewImage, duration, tint, onChange }: {
   id: string;
   title: string;
   startTime: string;
   previewImage: string | null;
   duration: number | null;
   tint: string | null;
-  onDeleted: (id: string) => void;
+  onChange: () => void | Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -780,7 +854,7 @@ function CardMenu({ id, title, startTime, previewImage, duration, tint, onDelete
     e.stopPropagation();
     setDeleting(true);
     await fetch(`/api/meetings/${id}`, { method: "DELETE" });
-    onDeleted(id);
+    await onChange();
   };
 
   return (

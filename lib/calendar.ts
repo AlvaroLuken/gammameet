@@ -79,13 +79,12 @@ export async function getUserMeetings(accessToken: string): Promise<CalendarMeet
 }
 
 export async function getUpcomingMeetings(accessToken: string): Promise<CalendarMeeting[]> {
-  // Include meetings that started up to 30 min ago so we can still schedule
-  // a bot for in-progress meetings (e.g., if a meeting was created with no
-  // lead time and our sync ran right after it started).
+  // 2-day lookahead (was 7). Users with packed calendars shouldn't have 50
+  // bots scheduled ahead of time; we keep the pipeline tight and re-scan often.
   const lookback = new Date(Date.now() - 30 * 60 * 1000);
-  const sevenDaysOut = new Date();
-  sevenDaysOut.setDate(sevenDaysOut.getDate() + 7);
-  return listEvents(accessToken, lookback.toISOString(), sevenDaysOut.toISOString());
+  const twoDaysOut = new Date();
+  twoDaysOut.setDate(twoDaysOut.getDate() + 2);
+  return listEvents(accessToken, lookback.toISOString(), twoDaysOut.toISOString());
 }
 
 export interface CalendarWatchResult {

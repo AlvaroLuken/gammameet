@@ -8,6 +8,7 @@ export interface DashboardPrefs {
   showUpcoming: boolean;
   showProcessing: boolean;
   showFailed: boolean;
+  showHidden: boolean;
   shareMode: ShareMode;
 }
 
@@ -15,6 +16,7 @@ const defaults: DashboardPrefs = {
   showUpcoming: true,
   showProcessing: true,
   showFailed: false,
+  showHidden: false,
   shareMode: "all_attendees",
 };
 
@@ -44,6 +46,7 @@ export async function PUT(req: NextRequest) {
     showUpcoming: body.showUpcoming ?? false,
     showProcessing: body.showProcessing ?? false,
     showFailed: body.showFailed ?? false,
+    showHidden: body.showHidden ?? false,
     shareMode: normalizeShareMode(body.shareMode),
   };
 

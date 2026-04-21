@@ -44,6 +44,7 @@ export default async function ProfilePage() {
     showUpcoming: true,
     showProcessing: true,
     showFailed: false,
+    showHidden: false,
     shareMode: "all_attendees" as const,
     ...(userData?.dashboard_prefs ?? {}),
   };

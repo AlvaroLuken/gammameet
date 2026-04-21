@@ -3,12 +3,10 @@ import { auth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 
 /**
- * "Delete" is a soft-delete — the meeting is hidden from the user's dashboard
- * but the record + Recall bot are left alone so it's fully reversible via
- * POST /api/meetings/[id]/unhide. To actually cancel the bot, use
- * /api/meetings/[id]/cancel-bot separately.
+ * Re-enable bot scheduling after the user previously cancelled it.
+ * Clears bot_status so the next sync run will create a fresh Recall bot.
  */
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -24,7 +22,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   await supabase
     .from("meetings")
-    .update({ dismissed_at: new Date().toISOString() })
+    .update({ bot_status: null })
     .eq("id", id);
 
   return NextResponse.json({ ok: true });

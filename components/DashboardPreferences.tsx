@@ -5,7 +5,7 @@ import { useState } from "react";
 type ShareMode = "all_attendees" | "me_only";
 
 interface Props {
-  initial: { showUpcoming: boolean; showProcessing: boolean; showFailed: boolean; shareMode: ShareMode };
+  initial: { showUpcoming: boolean; showProcessing: boolean; showFailed: boolean; showHidden: boolean; shareMode: ShareMode };
 }
 
 export function DashboardPreferences({ initial }: Props) {
@@ -13,7 +13,7 @@ export function DashboardPreferences({ initial }: Props) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const toggle = (key: "showUpcoming" | "showProcessing" | "showFailed") =>
+  const toggle = (key: "showUpcoming" | "showProcessing" | "showFailed" | "showHidden") =>
     setPrefs((p) => ({ ...p, [key]: !p[key] }));
 
   const save = async () => {
@@ -32,6 +32,7 @@ export function DashboardPreferences({ initial }: Props) {
     { key: "showUpcoming" as const, label: "Upcoming meetings", desc: "Meetings with a bot scheduled that haven't started yet" },
     { key: "showProcessing" as const, label: "Generating", desc: "Meetings currently being transcribed and turned into a deck" },
     { key: "showFailed" as const, label: "Failed", desc: "Meetings where deck generation didn't complete" },
+    { key: "showHidden" as const, label: "Hidden", desc: "Meetings you've dismissed — toggle on to see them and unhide" },
   ];
 
   return (
