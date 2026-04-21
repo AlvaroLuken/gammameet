@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { auth, signIn } from "@/lib/auth";
+import Link from "next/link";
+import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
@@ -10,11 +11,6 @@ export const metadata: Metadata = {
     description: "GammaMeet turns your meeting recordings into stunning AI-generated presentation decks — automatically, the moment your meeting ends.",
   },
 };
-
-async function handleSignIn() {
-  "use server";
-  await signIn("google", { redirectTo: "/dashboard" });
-}
 
 export default async function Home() {
   const session = await auth();
@@ -40,12 +36,10 @@ export default async function Home() {
         <span className="text-xl font-bold">
           Gamma<span className="text-violet-500">Meet</span>
         </span>
-        <form action={handleSignIn}>
-          <button type="submit" className="inline-flex items-center gap-2 bg-white text-black font-semibold px-5 py-2.5 text-sm rounded-full hover:bg-zinc-100 transition-colors cursor-pointer">
-            <GoogleIcon />
-            Sign in
-          </button>
-        </form>
+        <Link href="/beta-access" className="inline-flex items-center gap-2 bg-white text-black font-semibold px-5 py-2.5 text-sm rounded-full hover:bg-zinc-100 transition-colors cursor-pointer">
+          <GoogleIcon />
+          Sign in
+        </Link>
       </nav>
 
       {/* Hero */}
@@ -60,12 +54,10 @@ export default async function Home() {
         <p className="text-xl text-zinc-500 dark:text-zinc-400 max-w-xl mx-auto">
           GammaMeet turns your meeting recordings into stunning AI-generated presentation decks — automatically, the moment your meeting ends.
         </p>
-        <form action={handleSignIn}>
-          <button type="submit" className="inline-flex items-center gap-3 bg-white text-black font-semibold px-8 py-4 text-lg rounded-full hover:bg-zinc-100 transition-colors cursor-pointer">
-            <GoogleIcon />
-            Get started free
-          </button>
-        </form>
+        <Link href="/beta-access" className="inline-flex items-center gap-3 bg-white text-black font-semibold px-8 py-4 text-lg rounded-full hover:bg-zinc-100 transition-colors cursor-pointer">
+          <GoogleIcon />
+          Get started free
+        </Link>
         <p className="text-zinc-400 text-sm">Connects to Google Calendar · No credit card required</p>
       </section>
 
@@ -227,12 +219,10 @@ export default async function Home() {
       <section className="py-24 px-8 text-center space-y-6">
         <h2 className="text-4xl font-bold">Ready to recap smarter?</h2>
         <p className="text-zinc-500 dark:text-zinc-400">Join and get your first deck after your next meeting.</p>
-        <form action={handleSignIn}>
-          <button type="submit" className="inline-flex items-center gap-3 bg-white text-black font-semibold px-8 py-4 text-lg rounded-full hover:bg-zinc-100 transition-colors cursor-pointer">
-            <GoogleIcon />
-            Start for free
-          </button>
-        </form>
+        <Link href="/beta-access" className="inline-flex items-center gap-3 bg-white text-black font-semibold px-8 py-4 text-lg rounded-full hover:bg-zinc-100 transition-colors cursor-pointer">
+          <GoogleIcon />
+          Start for free
+        </Link>
       </section>
 
       <footer className="border-t border-zinc-200 dark:border-zinc-800 px-8 py-8 text-center text-zinc-400 text-sm space-y-3">
