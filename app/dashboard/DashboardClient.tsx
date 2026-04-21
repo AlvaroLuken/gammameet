@@ -651,7 +651,7 @@ function MeetingCard({ meeting, onDeleted }: { meeting: Meeting & { _upcoming?: 
 
   // Ready: deck generated
   return (
-    <CardMenu id={meeting.id} title={meeting.title} previewImage={meeting.preview_image} duration={duration} tint={dateTint(meeting.start_time)} onDeleted={onDeleted} />
+    <CardMenu id={meeting.id} title={meeting.title} startTime={meeting.start_time} previewImage={meeting.preview_image} duration={duration} tint={dateTint(meeting.start_time)} onDeleted={onDeleted} />
   );
 }
 
@@ -712,9 +712,10 @@ function FailedCard({ meeting, onDeleted }: { meeting: Meeting & { failure_reaso
   );
 }
 
-function CardMenu({ id, title, previewImage, duration, tint, onDeleted }: {
+function CardMenu({ id, title, startTime, previewImage, duration, tint, onDeleted }: {
   id: string;
   title: string;
+  startTime: string;
   previewImage: string | null;
   duration: number | null;
   tint: string | null;
@@ -768,7 +769,10 @@ function CardMenu({ id, title, previewImage, duration, tint, onDeleted }: {
         )}
       </div>
       <div className="flex items-start justify-between gap-2 p-3">
-        <p className="font-semibold text-zinc-900 dark:text-white leading-snug line-clamp-2 flex-1 min-w-0">{title}</p>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-zinc-900 dark:text-white leading-snug line-clamp-2">{title}</p>
+          <p className="text-zinc-500 dark:text-zinc-400 text-xs mt-0.5">{formatTime(startTime)}</p>
+        </div>
         <div ref={menuRef} className="relative shrink-0" onClick={(e) => e.preventDefault()}>
           <button
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen((o) => !o); setConfirming(false); }}
