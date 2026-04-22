@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { auth, signIn } from "@/lib/auth";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const metadata: Metadata = {
   title: "FAQ — GammaMeet",
@@ -142,17 +143,20 @@ export default async function FaqPage() {
         <Link href="/" className="text-xl font-bold hover:opacity-80 transition-opacity">
           Gamma<span className="text-violet-500">Meet</span>
         </Link>
-        {session ? (
-          <Link href="/dashboard" className="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white font-semibold px-5 py-2.5 text-sm rounded-full transition-colors cursor-pointer">
-            Go to dashboard →
-          </Link>
-        ) : (
-          <form action={handleSignIn}>
-            <button type="submit" className="inline-flex items-center gap-2 bg-white text-black font-semibold px-5 py-2.5 text-sm rounded-full hover:bg-zinc-100 transition-colors cursor-pointer">
-              Sign in
-            </button>
-          </form>
-        )}
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+          {session ? (
+            <Link href="/dashboard" className="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white font-semibold px-5 py-2.5 text-sm rounded-full transition-colors cursor-pointer">
+              Go to dashboard →
+            </Link>
+          ) : (
+            <form action={handleSignIn}>
+              <button type="submit" className="inline-flex items-center gap-2 bg-white text-black font-semibold px-5 py-2.5 text-sm rounded-full hover:bg-zinc-100 transition-colors cursor-pointer">
+                Sign in
+              </button>
+            </form>
+          )}
+        </div>
       </nav>
 
       {/* Hero */}

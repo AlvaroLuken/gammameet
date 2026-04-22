@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { signIn, auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const metadata: Metadata = {
   title: "Sign in · GammaMeet",
@@ -29,6 +30,7 @@ export default async function BetaAccessPage({ searchParams }: { searchParams: P
         <Link href="/" className="text-xl font-bold hover:opacity-80 transition-opacity">
           Gamma<span className="text-violet-500">Meet</span>
         </Link>
+        <ThemeToggle />
       </nav>
 
       <section className="flex-1 flex items-center justify-center px-6 py-16">

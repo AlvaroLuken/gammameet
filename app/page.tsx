@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const metadata: Metadata = {
   title: "GammaMeet — Every meeting, beautifully decked",
@@ -36,10 +37,13 @@ export default async function Home() {
         <span className="text-xl font-bold">
           Gamma<span className="text-violet-500">Meet</span>
         </span>
-        <Link href="/beta-access" className="inline-flex items-center gap-2 bg-white text-black font-semibold px-5 py-2.5 text-sm rounded-full hover:bg-zinc-100 transition-colors cursor-pointer">
-          <GoogleIcon />
-          Sign in
-        </Link>
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+          <Link href="/beta-access" className="inline-flex items-center gap-2 bg-white text-black font-semibold px-5 py-2.5 text-sm rounded-full hover:bg-zinc-100 transition-colors cursor-pointer">
+            <GoogleIcon />
+            Sign in
+          </Link>
+        </div>
       </nav>
 
       {/* Hero */}
