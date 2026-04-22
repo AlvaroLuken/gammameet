@@ -300,12 +300,23 @@ export default function DashboardClient({ user }: { user: User }) {
     <aside
       ref={sidebarRef}
       className={`
-        w-72 shrink-0 border-r border-zinc-200 dark:border-zinc-800
+        w-[85vw] max-w-xs md:w-72 shrink-0 border-r border-zinc-200 dark:border-zinc-800
         flex flex-col gap-6 px-4 py-6 overflow-y-auto bg-zinc-50 dark:bg-black
         fixed md:static inset-y-0 left-0 z-40 transition-transform duration-300
         ${sidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:translate-x-0"}
       `}
     >
+      {/* Mobile-only close button */}
+      <button
+        onClick={() => setSidebarOpen(false)}
+        className="md:hidden self-end -mt-2 -mr-2 w-9 h-9 inline-flex items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
+        aria-label="Close filters"
+      >
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
       {/* Search */}
       <div className="space-y-1.5">
         <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 px-1">Search</p>
@@ -400,7 +411,7 @@ export default function DashboardClient({ user }: { user: User }) {
     <div className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-white transition-colors flex flex-col">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/40 z-30 md:hidden" onClick={() => setSidebarOpen(false)} />
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-30 md:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
       <header className="border-b border-zinc-200 dark:border-zinc-800 px-4 md:px-8 py-4 flex items-center justify-between shrink-0 relative z-50">
