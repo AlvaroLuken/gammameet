@@ -3,6 +3,21 @@ import Google from "next-auth/providers/google";
 import { supabase } from "./supabase";
 import { sendWelcomeEmail } from "./email";
 
+/**
+ * Belt-and-suspenders: ensure a `users` row exists for the current session.
+ * Called on every server page load (via root layout). If the sign-in-time
+ * upsert silently failed for any reason, this catches it.
+ * Idempotent — onConflict: email makes repeat calls cheap.
+ */
+export async function ensureUserRecord(user: { email?: string | null; name?: string | null; image?: string | null }) {
+  if (!user.email) return;
+  const { error } = await supabase.from("users").upsert(
+    { email: user.email, name: user.name, image: user.image },
+    { onConflict: "email", ignoreDuplicates: false }
+  );
+  if (error) console.error(`ensureUserRecord upsert failed for ${user.email}:`, error);
+}
+
 async function refreshAccessToken(refreshToken: string) {
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",

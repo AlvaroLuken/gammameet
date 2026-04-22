@@ -3,7 +3,7 @@ import { Geist } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { UserIdentify } from "@/components/UserIdentify";
-import { auth } from "@/lib/auth";
+import { auth, ensureUserRecord } from "@/lib/auth";
 
 const geist = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 
@@ -53,6 +53,15 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
+  // Guarantee every authenticated user has a row in the users table — catches
+  // any drift where the sign-in-time upsert silently failed.
+  if (session?.user?.email) {
+    await ensureUserRecord({
+      email: session.user.email,
+      name: session.user.name ?? null,
+      image: session.user.image ?? null,
+    });
+  }
   return (
     <html lang="en" className={`${geist.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col bg-white dark:bg-black text-zinc-900 dark:text-white transition-colors">
