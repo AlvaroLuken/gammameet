@@ -537,9 +537,12 @@ export default function DashboardClient({ user }: { user: User }) {
                     </div>
                   </div>
 
-                  <div className="flex justify-center">
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
                     <Link href="/add-bot" className="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-colors cursor-pointer">
                       + Add bot to a meeting now
+                    </Link>
+                    <Link href="/profile" className="inline-flex items-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-violet-400 dark:hover:border-violet-600 text-zinc-700 dark:text-zinc-300 text-sm font-semibold px-5 py-2.5 rounded-full transition-colors cursor-pointer">
+                      ⚙ Set your preferences
                     </Link>
                   </div>
                 </div>
