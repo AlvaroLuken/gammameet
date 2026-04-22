@@ -302,14 +302,14 @@ export default function DashboardClient({ user }: { user: User }) {
       className={`
         w-[85vw] max-w-xs md:w-72 shrink-0 border-r border-zinc-200 dark:border-zinc-800
         flex flex-col gap-6 px-4 py-6 overflow-y-auto bg-zinc-50 dark:bg-black
-        fixed md:static inset-y-0 left-0 z-40 transition-transform duration-300
+        fixed md:static top-[70px] md:top-0 bottom-0 left-0 z-40 transition-transform duration-300
         ${sidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:translate-x-0"}
       `}
     >
-      {/* Mobile-only close button */}
+      {/* Mobile-only close button (top-left — keeps it away from header's theme toggle / profile on the right) */}
       <button
         onClick={() => setSidebarOpen(false)}
-        className="md:hidden self-end -mt-2 -mr-2 w-9 h-9 inline-flex items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
+        className="md:hidden self-start -mt-2 -ml-2 w-9 h-9 inline-flex items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
         aria-label="Close filters"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
