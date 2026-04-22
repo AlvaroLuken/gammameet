@@ -66,7 +66,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           isNewUser = !existing;
         }
 
-        await supabase.from("users").upsert(
+        const { error: upsertErr } = await supabase.from("users").upsert(
           {
             email: token.email,
             name: token.name,
@@ -75,6 +75,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           },
           { onConflict: "email" }
         );
+        if (upsertErr) {
+          console.error(`User upsert failed for ${token.email}:`, upsertErr);
+        }
 
         if (isNewUser && token.email) {
           sendWelcomeEmail({ to: token.email, name: token.name ?? null }).catch((err) =>
