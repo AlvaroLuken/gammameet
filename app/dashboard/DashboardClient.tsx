@@ -300,22 +300,29 @@ export default function DashboardClient({ user }: { user: User }) {
     <aside
       ref={sidebarRef}
       className={`
-        w-[85vw] max-w-xs md:w-72 shrink-0 border-r border-zinc-200 dark:border-zinc-800
-        flex flex-col gap-6 px-4 py-6 overflow-y-auto bg-zinc-50 dark:bg-black
-        fixed md:static top-[70px] md:top-0 bottom-0 left-0 z-40 transition-transform duration-300
+        w-[85vw] max-w-sm md:w-72 md:max-w-none shrink-0 border-r border-zinc-200 dark:border-zinc-800
+        flex flex-col overflow-y-auto bg-zinc-50 dark:bg-black
+        fixed md:static inset-y-0 left-0 z-[60] md:z-40 transition-transform duration-300
         ${sidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:translate-x-0"}
       `}
     >
-      {/* Mobile-only close button (top-left — keeps it away from header's theme toggle / profile on the right) */}
-      <button
-        onClick={() => setSidebarOpen(false)}
-        className="md:hidden self-start -mt-2 -ml-2 w-9 h-9 inline-flex items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
-        aria-label="Close filters"
-      >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
+      {/* Mobile-only header row (close + title) — desktop uses normal px/py */}
+      <div className="md:hidden flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top),1rem)] pb-3 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 bg-zinc-50 dark:bg-black z-10">
+        <button
+          onClick={() => setSidebarOpen(false)}
+          className="w-9 h-9 inline-flex items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
+          aria-label="Close filters"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        <span className="text-sm font-semibold text-zinc-900 dark:text-white">Filters</span>
+        <span className="w-9" aria-hidden />
+      </div>
+
+      {/* Content padding — desktop gets normal spacing, mobile inherits from header above */}
+      <div className="flex flex-col gap-6 px-4 py-6 md:py-6">
 
       {/* Search */}
       <div className="space-y-1.5">
@@ -404,6 +411,7 @@ export default function DashboardClient({ user }: { user: User }) {
           ✕ Clear all filters
         </button>
       )}
+      </div>
     </aside>
   );
 
