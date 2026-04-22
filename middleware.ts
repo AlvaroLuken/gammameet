@@ -7,6 +7,8 @@ export default auth((req) => {
   }
 });
 
+// Note: /meetings/:id is intentionally NOT auth-gated here. The page itself
+// redirects non-authed visitors to /share/:id so email links work for everyone.
 export const config = {
-  matcher: ["/dashboard", "/meetings/:path*", "/profile"],
+  matcher: ["/dashboard", "/profile"],
 };
