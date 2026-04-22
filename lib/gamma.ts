@@ -22,6 +22,20 @@ export async function generateGammaPage(
       format: "presentation",
       numCards: 8,
       exportAs: "pdf",
+      cardOptions: {
+        dimensions: "16x9",
+      },
+      imageOptions: {
+        source: "aiGenerated",
+        stylePreset: "abstract",
+        // Free-form guidance wins over preset alone — keeps Gamma from inventing
+        // faces/offices/participants (the "fake stock photo of fake people" problem).
+        style: "minimal abstract shapes and gradients, no people, no faces, no characters, no office scenes, muted professional colors, editorial",
+      },
+      sharingOptions: {
+        // Non-GammaMeet users should be able to view the deck without signing into Gamma.
+        externalAccess: "view",
+      },
     }),
   });
 
