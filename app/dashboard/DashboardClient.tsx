@@ -375,31 +375,14 @@ export default function DashboardClient({ user }: { user: User }) {
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 px-1">Attendees</p>
           <div className="flex flex-col gap-1">
-            {allAttendees.map((email) => {
-              const { color: ac, letter: al } = letterAvatar(email);
-              const checked = attendeeFilter.has(email);
-              return (
-                <button
-                  key={email}
-                  onClick={() => toggleAttendee(email)}
-                  className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors cursor-pointer ${
-                    checked
-                      ? "bg-violet-50 dark:bg-violet-950 border border-violet-200 dark:border-violet-800"
-                      : "hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                  }`}
-                >
-                  <span className={`w-6 h-6 shrink-0 rounded-full ${ac} text-white text-xs flex items-center justify-center font-bold`}>
-                    {al}
-                  </span>
-                  <span className="text-xs text-zinc-600 dark:text-zinc-400 truncate flex-1">{email}</span>
-                  {checked && (
-                    <svg className="w-3.5 h-3.5 text-violet-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </button>
-              );
-            })}
+            {allAttendees.map((email) => (
+              <AttendeeFilterRow
+                key={email}
+                email={email}
+                checked={attendeeFilter.has(email)}
+                onToggle={() => toggleAttendee(email)}
+              />
+            ))}
           </div>
         </div>
       )}
@@ -790,6 +773,60 @@ function MeetingCard({ meeting, onChange }: { meeting: Meeting & { _upcoming?: b
   // Ready: deck generated
   return (
     <CardMenu id={meeting.id} title={meeting.title} startTime={meeting.start_time} previewImage={meeting.preview_image} duration={duration} tint={dateTint(meeting.start_time)} onChange={onChange} />
+  );
+}
+
+function AttendeeFilterRow({ email, checked, onToggle }: { email: string; checked: boolean; onToggle: () => void }) {
+  const { color, letter } = letterAvatar(email);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(email);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch { /* clipboard unavailable */ }
+  };
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onToggle}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } }}
+      className={`group flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors cursor-pointer ${
+        checked
+          ? "bg-violet-50 dark:bg-violet-950 border border-violet-200 dark:border-violet-800"
+          : "hover:bg-zinc-100 dark:hover:bg-zinc-900"
+      }`}
+    >
+      <span className={`w-6 h-6 shrink-0 rounded-full ${color} text-white text-xs flex items-center justify-center font-bold`}>
+        {letter}
+      </span>
+      <span className="text-xs text-zinc-600 dark:text-zinc-400 truncate flex-1">{email}</span>
+      <button
+        onClick={handleCopy}
+        aria-label={copied ? "Copied" : "Copy email"}
+        className="shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
+      >
+        {copied ? (
+          <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        ) : (
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <rect x="9" y="9" width="11" height="11" rx="2" />
+            <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+          </svg>
+        )}
+      </button>
+      {checked && (
+        <svg className="w-3.5 h-3.5 text-violet-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+      )}
+    </div>
   );
 }
 
