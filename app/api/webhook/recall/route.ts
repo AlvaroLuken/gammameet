@@ -56,6 +56,13 @@ export async function POST(req: NextRequest) {
     "bot.recording_permission_denied": "not_admitted",
     "bot.fatal": "bot_fatal",
   };
+  // bot.fatal sub-codes that really mean "host never let the bot in" — more
+  // accurate to surface as not_admitted than as a generic bot error.
+  const NOT_ADMITTED_FATAL_SUBCODES = new Set([
+    "waiting_room_timeout",
+    "bot_kicked_from_waiting_room",
+    "timeout_waiting_for_host",
+  ]);
   const rank: Record<string, number> = { scheduled: 0, joining: 1, recording: 2, ended: 3, failed: 99 };
 
   if (event && botStatusMap[event]) {
@@ -78,7 +85,18 @@ export async function POST(req: NextRequest) {
       }
       if (next === "failed") {
         update.transcript_error = true;
-        update.failure_reason = failureReasonMap[event] ?? "bot_failed";
+        let reason = failureReasonMap[event] ?? "bot_failed";
+        if (event === "bot.fatal") {
+          // Recall's fatal payload carries a sub_code explaining why. Location
+          // varies across API versions — check both data.data and data.status.
+          const subCode =
+            ((data?.data as Record<string, unknown> | undefined)?.sub_code as string | undefined) ??
+            ((data?.status as Record<string, unknown> | undefined)?.sub_code as string | undefined);
+          if (subCode && NOT_ADMITTED_FATAL_SUBCODES.has(subCode)) {
+            reason = "not_admitted";
+          }
+        }
+        update.failure_reason = reason;
       }
       if (Object.keys(update).length > 0) {
         await supabase.from("meetings").update(update).eq("id", m.id);
@@ -151,7 +169,22 @@ async function processMeeting(
   }
 
   try {
-    const { segments, meetingTitle: recallTitle, participantEmails } = await getBotData(botId);
+    const { segments, meetingTitle: recallTitle, participantEmails, humanParticipantCount } = await getBotData(botId);
+
+    // Short-circuit when there's nothing to summarize. Two distinct cases:
+    //   - no_attendees: bot joined but no human ever did (or couldn't be counted)
+    //   - empty_transcript: humans were there but said ~nothing
+    // Either way: skip Gamma + email, surface a FailedCard.
+    const totalWords = segments.reduce((n, s) => n + s.words.length, 0);
+    if (humanParticipantCount === 0 || totalWords < 20) {
+      const reason = humanParticipantCount === 0 ? "no_attendees" : "empty_transcript";
+      await supabase
+        .from("meetings")
+        .update({ transcript_error: true, bot_status: "failed", failure_reason: reason })
+        .eq("id", meeting.id);
+      console.log(`Recall: skipped deck for ${meeting.id} — ${reason} (humans=${humanParticipantCount}, words=${totalWords})`);
+      return NextResponse.json({ received: true, skipped: reason });
+    }
 
     const participantNames = [...new Set(segments.map((s) => s.participant?.name ?? s.speaker ?? "Unknown"))];
 

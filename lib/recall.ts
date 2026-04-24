@@ -50,6 +50,7 @@ export async function createBot({
         pin: true,
       },
     },
+    automatic_leave: { waiting_room_timeout: 1200, noone_joined_timeout: 1200 },
     metadata: { gammameet_meeting_id: meetingId },
   };
   if (joinAt) body.join_at = joinAt;
@@ -108,6 +109,7 @@ export interface BotData {
   segments: RecallTranscriptSegment[];
   meetingTitle: string | null;
   participantEmails: string[];
+  humanParticipantCount: number;
 }
 
 export async function getBotData(botId: string): Promise<BotData> {
@@ -127,22 +129,28 @@ export async function getBotData(botId: string): Promise<BotData> {
 
   const meetingTitle: string | null = recording?.media_shortcuts?.meeting_metadata?.data?.title ?? null;
 
-  // Fetch participant emails from Recall's participants list
+  // Fetch participants from Recall. We need both the emails (for invite upsert)
+  // and a count of non-bot humans (to tell "nobody joined" from "joined silently").
   const participantsUrl = recording?.media_shortcuts?.participant_events?.data?.participants_download_url;
   let participantEmails: string[] = [];
+  let humanParticipantCount = 0;
   if (participantsUrl) {
     try {
       const pRes = await fetch(participantsUrl);
       if (pRes.ok) {
         const participants = await pRes.json();
-        participantEmails = (Array.isArray(participants) ? participants : [])
-          .map((p: { email?: string }) => p.email)
+        const list: { email?: string; is_host?: boolean; platform?: string; extra_data?: { is_bot?: boolean } }[] =
+          Array.isArray(participants) ? participants : [];
+        const humans = list.filter((p) => !p.extra_data?.is_bot);
+        humanParticipantCount = humans.length;
+        participantEmails = humans
+          .map((p) => p.email)
           .filter((e): e is string => !!e);
       }
     } catch { /* ignore */ }
   }
 
-  return { segments, meetingTitle, participantEmails };
+  return { segments, meetingTitle, participantEmails, humanParticipantCount };
 }
 
 export async function getTranscript(botId: string): Promise<RecallTranscriptSegment[]> {

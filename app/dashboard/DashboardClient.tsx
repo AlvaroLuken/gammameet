@@ -29,6 +29,8 @@ const FAILURE_COPY: Record<string, string> = {
   bot_fatal: "The notetaker bot hit an error",
   transcript_failed: "Transcript couldn't be generated",
   timeout: "No recording received in time",
+  no_attendees: "No one joined the meeting",
+  empty_transcript: "Not enough conversation to summarize",
 };
 // Failures where retry has a chance of working
 const RETRYABLE = new Set(["transcript_failed", "timeout"]);
@@ -558,7 +560,7 @@ export default function DashboardClient({ user }: { user: User }) {
             ) : (
               <>
                 {/* Grid/List toggle — aligned top-right above the deck grid */}
-                <div className="hidden md:flex justify-end -mt-2 mb-2">
+                <div className="flex justify-end -mt-2 mb-2">
                   <div className="inline-flex items-center bg-zinc-100 dark:bg-zinc-800 rounded-full p-0.5">
                     <button
                       onClick={() => changeViewMode("grid")}

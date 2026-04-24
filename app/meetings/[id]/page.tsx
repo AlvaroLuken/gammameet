@@ -10,13 +10,7 @@ import { ExpandableText } from "@/components/ExpandableText";
 import { ActionItemsList } from "@/components/ActionItemsList";
 import { DeckWithRegenOverlay } from "@/components/DeckWithRegenOverlay";
 import { MeetingRegenProvider } from "@/components/MeetingRegenContext";
-
-function letterAvatar(str: string) {
-  const colors = ["bg-violet-500", "bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-rose-500", "bg-cyan-500", "bg-pink-500", "bg-orange-500"];
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  return { color: colors[Math.abs(hash) % colors.length], letter: str[0].toUpperCase() };
-}
+import { AttendeeRow } from "@/components/AttendeeRow";
 
 export default async function MeetingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -71,17 +65,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Attendees</p>
               <div className="flex flex-col gap-1.5">
-                {attendees.map((email) => {
-                  const { color, letter } = letterAvatar(email);
-                  return (
-                    <div key={email} className="flex items-center gap-2.5 bg-zinc-100 dark:bg-zinc-800 px-3 py-2 rounded-lg">
-                      <span className={`w-7 h-7 shrink-0 rounded-full ${color} text-white text-xs flex items-center justify-center font-bold`}>
-                        {letter}
-                      </span>
-                      <span className="text-sm text-zinc-600 dark:text-zinc-400 truncate">{email}</span>
-                    </div>
-                  );
-                })}
+                {attendees.map((email) => <AttendeeRow key={email} email={email} />)}
               </div>
             </div>
           )}
