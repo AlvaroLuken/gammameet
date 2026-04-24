@@ -6,6 +6,7 @@ import Image from "next/image";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { MeetingRow } from "@/components/MeetingRow";
 import { DeleteWithConfirm } from "@/components/DeleteWithConfirm";
+import { SourceBadge, sourceOf } from "@/components/SourceBadge";
 import { dateTint } from "@/lib/dateTint";
 
 interface Meeting {
@@ -17,6 +18,7 @@ interface Meeting {
   export_url: string | null;
   preview_image: string | null;
   recall_bot_id: string | null;
+  meet_link: string | null;
   transcript_error: boolean | null;
   bot_status: string | null;
   failure_reason: string | null;
@@ -122,6 +124,7 @@ export default function DashboardClient({ user }: { user: User }) {
   const [showFailed, setShowFailed] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [sourceFilter, setSourceFilter] = useState<"all" | "meetings" | "recordings">("all");
 
   // Load view preference from localStorage
   useEffect(() => {
@@ -260,8 +263,12 @@ export default function DashboardClient({ user }: { user: User }) {
     return false;
   });
 
-  // Then apply search/date/attendee filters
+  // Then apply search/date/attendee/source filters
   let filtered = statusFiltered;
+  if (sourceFilter !== "all") {
+    const wanted = sourceFilter === "recordings" ? "recording" : "meeting";
+    filtered = filtered.filter((m) => sourceOf(m) === wanted);
+  }
   if (query.trim()) {
     filtered = filtered.filter((m) => m.title.toLowerCase().includes(query.toLowerCase()));
   }
@@ -548,8 +555,23 @@ export default function DashboardClient({ user }: { user: User }) {
               )
             ) : (
               <>
-                {/* Grid/List toggle — aligned top-right above the deck grid */}
-                <div className="flex justify-end -mt-2 mb-2">
+                {/* Source filter + grid/list toggle */}
+                <div className="flex flex-wrap items-center justify-end gap-2 -mt-2 mb-2">
+                  <div className="inline-flex items-center bg-zinc-100 dark:bg-zinc-800 rounded-full p-0.5">
+                    {(["all", "meetings", "recordings"] as const).map((key) => (
+                      <button
+                        key={key}
+                        onClick={() => setSourceFilter(key)}
+                        className={`text-xs font-medium px-3 py-1.5 rounded-full transition-colors cursor-pointer capitalize ${
+                          sourceFilter === key
+                            ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm"
+                            : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                        }`}
+                      >
+                        {key}
+                      </button>
+                    ))}
+                  </div>
                   <div className="inline-flex items-center bg-zinc-100 dark:bg-zinc-800 rounded-full p-0.5">
                     <button
                       onClick={() => changeViewMode("grid")}
@@ -778,7 +800,7 @@ function MeetingCard({ meeting, onChange }: { meeting: Meeting & { _upcoming?: b
 
   // Ready: deck generated
   return (
-    <CardMenu id={meeting.id} title={meeting.title} startTime={meeting.start_time} previewImage={meeting.preview_image} duration={duration} tint={dateTint(meeting.start_time)} onChange={onChange} />
+    <CardMenu id={meeting.id} title={meeting.title} startTime={meeting.start_time} previewImage={meeting.preview_image} duration={duration} tint={dateTint(meeting.start_time)} source={sourceOf(meeting)} onChange={onChange} />
   );
 }
 
@@ -868,8 +890,11 @@ function FailedCard({ meeting, onChange }: { meeting: Meeting & { failure_reason
 
   return (
     <div className="flex flex-col bg-white dark:bg-zinc-900 border border-red-200 dark:border-red-900/60 rounded-2xl overflow-hidden">
-      <div className="w-full aspect-video bg-red-50 dark:bg-red-950/20 flex items-center justify-center">
+      <div className="relative w-full aspect-video bg-red-50 dark:bg-red-950/20 flex items-center justify-center">
         <span className="text-3xl opacity-30">✕</span>
+        <span className="absolute top-2 left-2">
+          <SourceBadge source={sourceOf(meeting)} />
+        </span>
       </div>
       <div className="flex flex-col gap-1.5 p-4 flex-1">
         <p className="font-semibold text-zinc-900 dark:text-white leading-snug line-clamp-2">{meeting.title}</p>
@@ -891,13 +916,14 @@ function FailedCard({ meeting, onChange }: { meeting: Meeting & { failure_reason
   );
 }
 
-function CardMenu({ id, title, startTime, previewImage, duration, tint, onChange }: {
+function CardMenu({ id, title, startTime, previewImage, duration, tint, source, onChange }: {
   id: string;
   title: string;
   startTime: string;
   previewImage: string | null;
   duration: number | null;
   tint: string | null;
+  source: "meeting" | "recording";
   onChange: () => void | Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
@@ -946,6 +972,9 @@ function CardMenu({ id, title, startTime, previewImage, duration, tint, onChange
         {duration && (
           <span className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full z-10">{duration}m</span>
         )}
+        <span className="absolute top-2 left-2 z-10">
+          <SourceBadge source={source} />
+        </span>
       </div>
       <div className="flex items-start justify-between gap-2 p-3">
         <div className="flex-1 min-w-0">

@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { dateTint } from "@/lib/dateTint";
+import { SourceBadge, sourceOf } from "@/components/SourceBadge";
 
 interface Meeting {
   id: string;
@@ -13,6 +14,7 @@ interface Meeting {
   gamma_url: string | null;
   preview_image: string | null;
   recall_bot_id: string | null;
+  meet_link: string | null;
   transcript_error: boolean | null;
   bot_status: string | null;
   failure_reason: string | null;
@@ -78,7 +80,10 @@ export function MeetingRow({ meeting, onChange }: { meeting: Classified; onChang
 
       {/* Title + time */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">{meeting.title}</p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate flex-1 min-w-0">{meeting.title}</p>
+          <SourceBadge source={sourceOf(meeting)} variant="inline" />
+        </div>
         <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
           {formatTime(meeting.start_time)} · <span className={status.labelClass}>{status.label}</span>
         </p>
