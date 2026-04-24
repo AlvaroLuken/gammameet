@@ -185,7 +185,7 @@ export async function getBotMetadata(botId: string): Promise<Record<string, stri
 
 import Anthropic from "@anthropic-ai/sdk";
 
-export function transcriptToText(segments: RecallTranscriptSegment[]): string {
+function transcriptToText(segments: RecallTranscriptSegment[]): string {
   return segments
     .map((s) => {
       const name = s.speaker ?? s.participant?.name ?? "Unknown";

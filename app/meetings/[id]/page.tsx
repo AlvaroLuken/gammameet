@@ -11,7 +11,7 @@ import { ActionItemsList } from "@/components/ActionItemsList";
 import { DeckWithRegenOverlay } from "@/components/DeckWithRegenOverlay";
 import { MeetingRegenProvider } from "@/components/MeetingRegenContext";
 import { AttendeeRow } from "@/components/AttendeeRow";
-import { TranscriptToggle } from "@/components/TranscriptToggle";
+import { BriefToggle } from "@/components/BriefToggle";
 
 export default async function MeetingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -85,7 +85,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
             ) : (
               <p className="text-sm text-zinc-400 dark:text-zinc-500 italic">No action items detected in this meeting.</p>
             )}
-            {meeting.transcript_text && <TranscriptToggle text={meeting.transcript_text} />}
+            {meeting.gamma_brief && <BriefToggle text={meeting.gamma_brief} />}
           </div>
 
           <ActionsMenu id={id} gammaUrl={meeting.gamma_url} exportUrl={meeting.export_url} title={meeting.title} />
