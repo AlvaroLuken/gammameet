@@ -492,6 +492,50 @@ export default function DashboardClient({ user }: { user: User }) {
                     Clear filters
                   </button>
                 </div>
+              ) : sourceFilter === "recordings" ? (
+                /* Recordings-specific empty state */
+                <div className="max-w-lg mx-auto py-12 space-y-6">
+                  <div className="text-center space-y-2">
+                    <p className="text-2xl font-bold">No recordings yet</p>
+                    <p className="text-zinc-500 text-sm">Capture audio from any call — Signal, WhatsApp, a phone call, a Zoom native app — and Jim will turn it into a deck.</p>
+                  </div>
+
+                  <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl divide-y divide-zinc-100 dark:divide-zinc-800 overflow-hidden">
+                    <div className="flex items-start gap-4 p-5">
+                      <span className="w-7 h-7 rounded-full bg-violet-100 dark:bg-violet-950 text-violet-600 dark:text-violet-400 text-sm flex items-center justify-center shrink-0 font-bold mt-0.5">1</span>
+                      <div>
+                        <p className="font-semibold text-sm">Open <Link href="/record" className="text-violet-500 hover:underline">Record</Link></p>
+                        <p className="text-zinc-500 dark:text-zinc-400 text-xs mt-0.5 leading-relaxed">
+                          Give mic permission. Pick a title if you want, confirm consent, and hit Start.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-4 p-5">
+                      <span className="w-7 h-7 rounded-full bg-violet-100 dark:bg-violet-950 text-violet-600 dark:text-violet-400 text-sm flex items-center justify-center shrink-0 font-bold mt-0.5">2</span>
+                      <div>
+                        <p className="font-semibold text-sm">Choose your audio source</p>
+                        <p className="text-zinc-500 dark:text-zinc-400 text-xs mt-0.5 leading-relaxed">
+                          For native apps / phone calls: put the call on <span className="font-medium text-zinc-700 dark:text-zinc-300">speakerphone</span> — your mic picks up both sides. For in-browser calls (Signal Web, WhatsApp Web, Meet, Zoom Web): check <span className="font-medium text-zinc-700 dark:text-zinc-300">&quot;Also capture a tab&quot;</span> and pick the tab.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-4 p-5">
+                      <span className="w-7 h-7 rounded-full bg-violet-100 dark:bg-violet-950 text-violet-600 dark:text-violet-400 text-sm flex items-center justify-center shrink-0 font-bold mt-0.5">3</span>
+                      <div>
+                        <p className="font-semibold text-sm">Stop when the call ends</p>
+                        <p className="text-zinc-500 dark:text-zinc-400 text-xs mt-0.5 leading-relaxed">
+                          We transcribe the audio, generate a deck, and email it to you.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-center">
+                    <Link href="/record" className="inline-flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-colors cursor-pointer">
+                      ● Start a recording
+                    </Link>
+                  </div>
+                </div>
               ) : (
                 /* Onboarding empty state */
                 <div className="max-w-lg mx-auto py-12 space-y-6">
