@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { transcribeAudioUrl } from "@/lib/deepgram";
-import { generateMeetingBrief, buildPromptFromRecallTranscript } from "@/lib/recall";
+import { generateMeetingBrief, buildPromptFromRecallTranscript, transcriptToText } from "@/lib/recall";
 import { generateGammaPage } from "@/lib/gamma";
 import { sendRecapEmail } from "@/lib/email";
 
@@ -114,6 +114,13 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       .update({ gamma_brief: brief.gammaBrief })
       .eq("id", id);
     if (bErr) console.error("gamma_brief update failed (non-fatal):", bErr);
+
+    // Optional — transcript_text column may not exist yet
+    const { error: tErr } = await supabase
+      .from("meetings")
+      .update({ transcript_text: transcriptToText(segments) })
+      .eq("id", id);
+    if (tErr) console.error("transcript_text update failed (non-fatal):", tErr);
 
     const recipients = invitedEmails.length > 0 ? invitedEmails : [session.user.email];
     const gammaMeetUrl = `${process.env.APP_URL ?? "https://gammameet.vercel.app"}/meetings/${id}`;
