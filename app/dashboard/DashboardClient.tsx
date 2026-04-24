@@ -846,7 +846,7 @@ function FailedCard({ meeting, onChange }: { meeting: Meeting & { failure_reason
 
   const handleDelete = async () => {
     setDeleting(true);
-    await fetch(`/api/meetings/${meeting.id}`, { method: "DELETE" });
+    await fetch(`/api/meetings/${meeting.id}/purge`, { method: "POST" });
     await onChange();
   };
 
