@@ -80,14 +80,14 @@ export function MeetingRow({ meeting, onChange }: { meeting: Classified; onChang
 
       {/* Title + time */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate flex-1 min-w-0">{meeting.title}</p>
-          <SourceBadge source={sourceOf(meeting)} variant="inline" />
-        </div>
+        <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">{meeting.title}</p>
         <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
           {formatTime(meeting.start_time)} · <span className={status.labelClass}>{status.label}</span>
         </p>
       </div>
+
+      {/* Source badge — vertically centered with the row, paired with the menu */}
+      <SourceBadge source={sourceOf(meeting)} variant="inline" />
 
       {/* 3-dot menu with state-aware actions */}
       <RowMenu
