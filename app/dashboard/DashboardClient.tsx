@@ -424,6 +424,12 @@ export default function DashboardClient({ user }: { user: User }) {
         </div>
         <div className="flex items-center gap-2">
           <Link
+            href="/record"
+            className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 px-4 py-2 rounded-full transition-colors cursor-pointer"
+          >
+            ● Record
+          </Link>
+          <Link
             href="/add-bot"
             className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-full transition-colors cursor-pointer"
           >
