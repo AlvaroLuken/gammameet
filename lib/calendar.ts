@@ -71,13 +71,6 @@ async function listEvents(accessToken: string, timeMin: string, timeMax: string)
     }));
 }
 
-export async function getUserMeetings(accessToken: string): Promise<CalendarMeeting[]> {
-  const now = new Date();
-  const threeMonthsAgo = new Date();
-  threeMonthsAgo.setMonth(now.getMonth() - 3);
-  return listEvents(accessToken, threeMonthsAgo.toISOString(), now.toISOString());
-}
-
 export async function getUpcomingMeetings(accessToken: string): Promise<CalendarMeeting[]> {
   // 2-day lookahead (was 7). Users with packed calendars shouldn't have 50
   // bots scheduled ahead of time; we keep the pipeline tight and re-scan often.

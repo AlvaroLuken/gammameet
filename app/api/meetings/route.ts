@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { getUserMeetings } from "@/lib/calendar";
 import { supabase } from "@/lib/supabase";
 import { scheduleBotsForUser } from "@/lib/sync";
 
@@ -43,37 +42,10 @@ export async function GET() {
 }
 
 async function syncCalendar(userEmail: string, accessToken: string) {
-  // Sync past meetings for record-keeping
-  const pastMeetings = await getUserMeetings(accessToken);
-  for (const m of pastMeetings) {
-    const { data: existing } = await supabase
-      .from("meetings")
-      .select("id")
-      .eq("calendar_event_id", m.id)
-      .single();
-
-    if (!existing) {
-      const { data: meeting } = await supabase
-        .from("meetings")
-        .insert({
-          calendar_event_id: m.id,
-          title: m.title,
-          start_time: m.start,
-          end_time: m.end,
-          meet_link: m.meetLink,
-        })
-        .select()
-        .single();
-
-      if (meeting && m.attendees.length > 0) {
-        await supabase.from("meeting_invites").insert(
-          m.attendees.map((email) => ({ meeting_id: meeting.id, email }))
-        );
-      }
-    }
-  }
-
-  // Schedule bots for upcoming meetings
+  // We intentionally do NOT index past calendar events — only upcoming meetings
+  // we're scheduling bots for land in the DB. Past events would be noise at
+  // best and a privacy concern at worst (meetings the user never chose to
+  // record).
   const { data: user } = await supabase
     .from("users")
     .select("id")
