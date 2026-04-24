@@ -23,10 +23,16 @@ export function RecordClient({ userName }: { userName: string }) {
   const [error, setError] = useState<string | null>(null);
   const [statusNote, setStatusNote] = useState<string | null>(null);
 
+  const [micLevel, setMicLevel] = useState(0);
+  const [tabLevel, setTabLevel] = useState<number | null>(null);
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamsRef = useRef<MediaStream[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const micAnalyserRef = useRef<AnalyserNode | null>(null);
+  const tabAnalyserRef = useRef<AnalyserNode | null>(null);
+  const meterRafRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
   const tickTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -38,12 +44,42 @@ export function RecordClient({ userName }: { userName: string }) {
   function stopAllTracks() {
     if (tickTimerRef.current) clearInterval(tickTimerRef.current);
     tickTimerRef.current = null;
+    if (meterRafRef.current !== null) cancelAnimationFrame(meterRafRef.current);
+    meterRafRef.current = null;
     for (const s of streamsRef.current) s.getTracks().forEach((t) => t.stop());
     streamsRef.current = [];
     if (audioContextRef.current && audioContextRef.current.state !== "closed") {
       audioContextRef.current.close().catch(() => {});
     }
     audioContextRef.current = null;
+    micAnalyserRef.current = null;
+    tabAnalyserRef.current = null;
+    setMicLevel(0);
+    setTabLevel(null);
+  }
+
+  /** RMS of time-domain data, normalized 0–1 then soft-knee mapped to feel louder at low volume. */
+  function readLevel(analyser: AnalyserNode, buf: Uint8Array<ArrayBuffer>): number {
+    analyser.getByteTimeDomainData(buf);
+    let sumSq = 0;
+    for (let i = 0; i < buf.length; i++) {
+      const v = (buf[i] - 128) / 128;
+      sumSq += v * v;
+    }
+    const rms = Math.sqrt(sumSq / buf.length);
+    // Perceptual curve — linear RMS looks dead at normal speech levels
+    return Math.min(1, Math.pow(rms, 0.5) * 1.8);
+  }
+
+  function startMeterLoop() {
+    const micBuf = new Uint8Array(new ArrayBuffer(1024));
+    const tabBuf = new Uint8Array(new ArrayBuffer(1024));
+    const tick = () => {
+      if (micAnalyserRef.current) setMicLevel(readLevel(micAnalyserRef.current, micBuf));
+      if (tabAnalyserRef.current) setTabLevel(readLevel(tabAnalyserRef.current, tabBuf));
+      meterRafRef.current = requestAnimationFrame(tick);
+    };
+    meterRafRef.current = requestAnimationFrame(tick);
   }
 
   async function handleStart() {
@@ -60,7 +96,18 @@ export function RecordClient({ userName }: { userName: string }) {
       });
       streamsRef.current.push(micStream);
 
-      let mergedStream = micStream;
+      // Single AudioContext used for both metering (analysers) and stream mixing
+      // when tab audio is enabled.
+      const ctx = new AudioContext();
+      audioContextRef.current = ctx;
+      const destination = ctx.createMediaStreamDestination();
+
+      const micSource = ctx.createMediaStreamSource(micStream);
+      const micAnalyser = ctx.createAnalyser();
+      micAnalyser.fftSize = 2048;
+      micSource.connect(micAnalyser);
+      micSource.connect(destination);
+      micAnalyserRef.current = micAnalyser;
 
       if (captureTab) {
         try {
@@ -75,21 +122,25 @@ export function RecordClient({ userName }: { userName: string }) {
 
           const tabAudioTracks = display.getAudioTracks();
           if (tabAudioTracks.length === 0) {
-            setStatusNote("Tab audio wasn't shared — recording mic only. Pick a tab and check 'Share tab audio' next time.");
+            setStatusNote("Tab audio wasn't shared — recording mic only. Next time, pick a Chrome Tab and check 'Share tab audio' at the bottom of the picker.");
           } else {
-            // Mix mic + tab audio into a single stream via Web Audio API
-            const ctx = new AudioContext();
-            audioContextRef.current = ctx;
-            const destination = ctx.createMediaStreamDestination();
-            ctx.createMediaStreamSource(micStream).connect(destination);
-            ctx.createMediaStreamSource(new MediaStream([tabAudioTracks[0]])).connect(destination);
-            mergedStream = destination.stream;
+            const tabStream = new MediaStream([tabAudioTracks[0]]);
+            const tabSource = ctx.createMediaStreamSource(tabStream);
+            const tabAnalyser = ctx.createAnalyser();
+            tabAnalyser.fftSize = 2048;
+            tabSource.connect(tabAnalyser);
+            tabSource.connect(destination);
+            tabAnalyserRef.current = tabAnalyser;
+            setTabLevel(0); // initialize so the meter UI renders
           }
         } catch (err) {
           // User cancelled the tab picker — proceed with mic only
           console.warn("Tab audio capture cancelled or denied:", err);
         }
       }
+
+      const mergedStream = destination.stream;
+      startMeterLoop();
 
       const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
         ? "audio/webm;codecs=opus"
@@ -224,9 +275,19 @@ export function RecordClient({ userName }: { userName: string }) {
                 <span className="text-sm font-medium text-red-500 uppercase tracking-widest">Recording</span>
               </div>
               <div className="text-6xl font-mono font-bold tabular-nums">{formatElapsed(elapsed)}</div>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                {captureTab ? "Mic + tab audio" : "Mic only — put your call on speakerphone"}
-              </p>
+
+              <div className="space-y-3 text-left">
+                <LevelMeter label="Mic" level={micLevel} hint="Should move when anyone talks — including speaker audio reaching your mic." />
+                {tabLevel !== null && (
+                  <LevelMeter label="Tab audio" level={tabLevel} hint="Should move when the shared tab plays sound." />
+                )}
+                {micLevel < 0.03 && elapsed > 3 && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+                    ⚠ Mic is silent. Check macOS mic input (Control Center → Mic Mode → Standard) and that the right input device is selected.
+                  </p>
+                )}
+              </div>
+
               <button
                 onClick={handleStop}
                 className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl transition-colors cursor-pointer"
@@ -260,6 +321,26 @@ export function RecordClient({ userName }: { userName: string }) {
           )}
         </div>
       </main>
+    </div>
+  );
+}
+
+function LevelMeter({ label, level, hint }: { label: string; level: number; hint: string }) {
+  const pct = Math.round(level * 100);
+  const barColor =
+    level < 0.05 ? "bg-zinc-300 dark:bg-zinc-700"
+    : level < 0.6 ? "bg-emerald-500"
+    : "bg-amber-500";
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-semibold text-zinc-700 dark:text-zinc-300">{label}</span>
+        <span className="text-zinc-400 dark:text-zinc-500 tabular-nums">{pct}%</span>
+      </div>
+      <div className="h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+        <div className={`h-full ${barColor} transition-[width] duration-75`} style={{ width: `${pct}%` }} />
+      </div>
+      <p className="text-[11px] text-zinc-500 dark:text-zinc-500">{hint}</p>
     </div>
   );
 }
