@@ -200,6 +200,7 @@ export interface MeetingBrief {
   summary: string;      // 2-4 sentence exec summary (for sidebar)
   actionItems: string;  // bullet list of committed tasks (for sidebar)
   gammaBrief: string;   // structured markdown doc fed to Gamma for deck generation
+  numCards: number;     // recommended slide count for Gamma, clamped 4–14
 }
 
 export type MeetingType =
@@ -254,11 +255,11 @@ export async function generateMeetingBrief(
 ): Promise<MeetingBrief> {
   if (!process.env.ANTHROPIC_API_KEY) {
     console.warn("ANTHROPIC_API_KEY not set, skipping LLM brief");
-    return { summary: "", actionItems: "", gammaBrief: "" };
+    return { summary: "", actionItems: "", gammaBrief: "", numCards: 8 };
   }
 
   const text = transcriptToText(segments);
-  if (!text.trim()) return { summary: "", actionItems: "", gammaBrief: "" };
+  if (!text.trim()) return { summary: "", actionItems: "", gammaBrief: "", numCards: 8 };
 
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -272,12 +273,13 @@ ${typeGuidance}
 
 Write as a clear analyst, not a note-taker. Organize by theme, not chronology. Lead with WHY things matter, not just WHAT was said. Use the participants' actual words as quotes when they're pithy or load-bearing. Skip filler — no "we then talked about" summaries of summaries.
 
-Return strict JSON with exactly these three fields, no prose outside the JSON:
+Return strict JSON with exactly these four fields, no prose outside the JSON:
 
 {
   "summary": "2-4 sentences. What was this meeting about, what got decided, and why does it matter? Not a retelling — a takeaway. Write for someone who wasn't there.",
   "actionItems": ["Extract every next step, follow-up, task, and commitment from the meeting — not just formal assignments. Include loosely-committed items ('we should look into X', 'I'll probably reach out to Y') and implicit ones ('we need to figure out Z'). Include the owner if mentioned (e.g. \\"Alice: Ship the dashboard mockup by Friday\\"). If the owner is unclear, lead with the action alone. Aim for 3-10 items for a typical 15+ minute meeting. Only return empty if the conversation was truly non-actionable (e.g. social chat). Don't invent tasks that weren't discussed, but don't be stingy either."],
-  "gammaBrief": "A structured markdown document Gamma will turn into a presentation. Use H1 for the title, H2 for major sections. Target 8 sections that make great slides. Use section structure that fits this meeting type — don't blindly follow a template if it doesn't fit. Default sections to include unless the type guidance above suggests otherwise: TL;DR, Key Decisions, Action Items, Core Themes (the meat — one sub-section per topic with insight and attributed quotes), Open Questions, Notable Quotes, Participants, Next Steps."
+  "gammaBrief": "A structured markdown document Gamma will turn into a presentation. Use H1 for the title, H2 for major sections. Use section structure that fits this meeting type — don't blindly follow a template if it doesn't fit. Default sections to include unless the type guidance above suggests otherwise: TL;DR, Key Decisions, Action Items, Core Themes (the meat — one sub-section per topic with insight and attributed quotes), Open Questions, Notable Quotes, Participants, Next Steps.",
+  "numCards": "Integer between 4 and 14 — how many slides this meeting's deck should have, based on the richness and breadth of content. A 5-min standup with one decision: 4-5. A typical 30-min meeting: 7-9. An hour-long discussion with many distinct topics or a dense customer call: 10-14. Match slide count to content, don't pad or compress."
 }`;
 
   const userMessage = `Meeting: ${meetingTitle}
@@ -296,7 +298,7 @@ ${text}`;
   });
 
   const content = res.content[0];
-  if (content.type !== "text") return { summary: "", actionItems: "", gammaBrief: "" };
+  if (content.type !== "text") return { summary: "", actionItems: "", gammaBrief: "", numCards: 8 };
 
   try {
     const match = content.text.match(/\{[\s\S]*\}/);
@@ -304,6 +306,10 @@ ${text}`;
     const actions: string[] = Array.isArray(parsed.actionItems) ? parsed.actionItems : [];
     const summary = String(parsed.summary ?? "").trim();
     const gammaBrief = String(parsed.gammaBrief ?? "").trim();
+    const rawNumCards = Number(parsed.numCards);
+    const numCards = Number.isFinite(rawNumCards)
+      ? Math.min(14, Math.max(4, Math.round(rawNumCards)))
+      : 8;
 
     // Fallback: if Claude returned an empty actionItems array but wrote them
     // under "## Action Items" in gammaBrief, extract them from there.
@@ -316,11 +322,11 @@ ${text}`;
       }
     }
 
-    console.log(`[brief] Claude returned: summary=${summary.length}ch, actionItems=${actions.length}, gammaBrief=${gammaBrief.length}ch`);
-    return { summary, actionItems, gammaBrief };
+    console.log(`[brief] Claude returned: summary=${summary.length}ch, actionItems=${actions.length}, gammaBrief=${gammaBrief.length}ch, numCards=${numCards}`);
+    return { summary, actionItems, gammaBrief, numCards };
   } catch (err) {
     console.error("Failed to parse Claude brief response:", err, content.text);
-    return { summary: "", actionItems: "", gammaBrief: "" };
+    return { summary: "", actionItems: "", gammaBrief: "", numCards: 8 };
   }
 }
 

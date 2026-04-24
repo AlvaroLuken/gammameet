@@ -8,8 +8,11 @@ export interface GammaResult {
 
 export async function generateGammaPage(
   title: string,
-  content: string
+  content: string,
+  numCards: number = 8
 ): Promise<GammaResult> {
+  // Gamma accepts 1–60 but anything outside ~4–14 produces junk decks for meetings.
+  const cards = Math.min(14, Math.max(4, Math.round(numCards)));
   const res = await fetch(`${GAMMA_API_URL}/generations`, {
     method: "POST",
     headers: {
@@ -20,7 +23,7 @@ export async function generateGammaPage(
       inputText: `${title}\n\n${content}`,
       textMode: "generate",
       format: "presentation",
-      numCards: 8,
+      numCards: cards,
       exportAs: "pdf",
       cardOptions: {
         dimensions: "16x9",

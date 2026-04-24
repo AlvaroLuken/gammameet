@@ -220,13 +220,13 @@ async function processMeeting(
     // Generate a structured brief first — this feeds Gamma a much better input than raw transcript
     const brief = await generateMeetingBrief(segments, title, meeting.start_time, participantNames).catch((err) => {
       console.error("Claude brief failed, falling back to raw transcript:", err);
-      return { summary: "", actionItems: "", gammaBrief: "" };
+      return { summary: "", actionItems: "", gammaBrief: "", numCards: 8 };
     });
-    const { summary, actionItems, gammaBrief } = brief;
+    const { summary, actionItems, gammaBrief, numCards } = brief;
 
     // Prefer the structured brief; fall back to raw transcript formatting if the brief is empty
     const gammaInput = gammaBrief || buildPromptFromRecallTranscript(title, meeting.start_time, participantNames, segments);
-    const { gammaUrl, exportUrl, previewImage } = await generateGammaPage(title, gammaInput);
+    const { gammaUrl, exportUrl, previewImage } = await generateGammaPage(title, gammaInput, numCards);
 
     // Critical update — must succeed
     const { error: updateErr } = await supabase

@@ -87,10 +87,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // Use the Claude-powered structured brief (same pipeline as fresh meetings)
     const brief = await generateMeetingBrief(segments, title, meeting.start_time, participantNames).catch((err) => {
       console.error("Claude brief failed during regenerate, falling back:", err);
-      return { summary: "", actionItems: "", gammaBrief: "" };
+      return { summary: "", actionItems: "", gammaBrief: "", numCards: 8 };
     });
     const gammaInput = brief.gammaBrief || buildPromptFromRecallTranscript(title, meeting.start_time, participantNames, segments);
-    const { gammaUrl, exportUrl, previewImage } = await generateGammaPage(title, gammaInput);
+    const { gammaUrl, exportUrl, previewImage } = await generateGammaPage(title, gammaInput, brief.numCards);
 
     await supabase
       .from("meetings")
