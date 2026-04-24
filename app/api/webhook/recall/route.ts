@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { getBotData, getBotMetadata, buildPromptFromRecallTranscript, inferTitleFromSegments, generateMeetingBrief } from "@/lib/recall";
+import { getBotData, getBotMetadata, buildPromptFromRecallTranscript, inferTitleFromSegments, generateMeetingBrief, transcriptToText } from "@/lib/recall";
 import { generateGammaPage } from "@/lib/gamma";
 import { sendRecapEmail } from "@/lib/email";
 
@@ -244,6 +244,13 @@ async function processMeeting(
       .update({ summary, action_items: actionItems })
       .eq("id", meeting.id);
     if (extraErr) console.error("Summary/actions update failed (non-fatal):", extraErr);
+
+    // Optional update — transcript_text column may not exist yet
+    const { error: tErr } = await supabase
+      .from("meetings")
+      .update({ transcript_text: transcriptToText(segments) })
+      .eq("id", meeting.id);
+    if (tErr) console.error("transcript_text update failed (non-fatal):", tErr);
 
     if (allEmails.length > 0) {
       const gammaMeetUrl = `${process.env.APP_URL ?? "https://gammameet.vercel.app"}/meetings/${meeting.id}`;
