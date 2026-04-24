@@ -29,7 +29,7 @@ export function AttendeeRow({ email }: { email: string }) {
       <button
         onClick={handleCopy}
         aria-label={copied ? "Copied" : "Copy email"}
-        className="shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
+        className="shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus:opacity-100 transition-opacity text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
       >
         {copied ? (
           <svg className="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
