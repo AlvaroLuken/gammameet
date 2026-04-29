@@ -81,7 +81,9 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     const participantNames = [...new Set(segments.map((s) => s.speaker ?? "Unknown"))];
     const title: string = meeting.title;
 
+    let briefThrew = false;
     const brief = await generateMeetingBrief(segments, title, meeting.start_time, participantNames).catch((err) => {
+      briefThrew = true;
       console.error("Claude brief failed during record processing:", err);
       Sentry.captureException(err, {
         tags: { component: "claude_brief_throw", source: "record_process" },
@@ -89,6 +91,22 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       });
       return { summary: "", actionItems: "", gammaBrief: "", numCards: 8 };
     });
+
+    if (!briefThrew && (!brief.summary || !brief.gammaBrief)) {
+      Sentry.captureMessage("Meeting brief empty without exception", {
+        level: "warning",
+        tags: { component: "claude_brief_empty", source: "record_process" },
+        extra: {
+          meetingId: id,
+          title,
+          hasSummary: !!brief.summary,
+          hasGammaBrief: !!brief.gammaBrief,
+          actionItemsLength: brief.actionItems.length,
+          numCards: brief.numCards,
+          transcriptSegments: segments.length,
+        },
+      });
+    }
 
     const gammaInput = brief.gammaBrief || buildPromptFromRecallTranscript(title, meeting.start_time, participantNames, segments);
     const { gammaUrl, exportUrl, previewImage } = await generateGammaPage(title, gammaInput, brief.numCards);
@@ -110,7 +128,13 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       .from("meetings")
       .update({ summary: brief.summary, action_items: brief.actionItems })
       .eq("id", id);
-    if (extraErr) console.error("summary/actions update failed (non-fatal):", extraErr);
+    if (extraErr) {
+      console.error("summary/actions update failed (non-fatal):", extraErr);
+      Sentry.captureException(extraErr, {
+        tags: { component: "db_update_summary", source: "record_process" },
+        extra: { meetingId: id },
+      });
+    }
 
     // Optional — gamma_brief column may not exist yet. Claude's distilled
     // version of the transcript, as fed to Gamma.
@@ -118,14 +142,26 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       .from("meetings")
       .update({ gamma_brief: brief.gammaBrief })
       .eq("id", id);
-    if (bErr) console.error("gamma_brief update failed (non-fatal):", bErr);
+    if (bErr) {
+      console.error("gamma_brief update failed (non-fatal):", bErr);
+      Sentry.captureException(bErr, {
+        tags: { component: "db_update_gamma_brief", source: "record_process" },
+        extra: { meetingId: id },
+      });
+    }
 
     // Optional — transcript_text column may not exist yet
     const { error: tErr } = await supabase
       .from("meetings")
       .update({ transcript_text: transcriptToText(segments) })
       .eq("id", id);
-    if (tErr) console.error("transcript_text update failed (non-fatal):", tErr);
+    if (tErr) {
+      console.error("transcript_text update failed (non-fatal):", tErr);
+      Sentry.captureException(tErr, {
+        tags: { component: "db_update_transcript", source: "record_process" },
+        extra: { meetingId: id },
+      });
+    }
 
     // Atomic single-shot send guard — see webhook/recall for rationale.
     const { data: emailClaim } = await supabase
@@ -153,6 +189,10 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ ok: true, gammaUrl, meetingId: id });
   } catch (err) {
     console.error("Record processing failed:", err);
+    Sentry.captureException(err, {
+      tags: { component: "process_meeting_throw", source: "record_process" },
+      extra: { meetingId: id },
+    });
     await supabase
       .from("meetings")
       .update({ transcript_error: true, bot_status: "failed", failure_reason: "transcript_failed" })

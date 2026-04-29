@@ -219,7 +219,9 @@ async function processMeeting(
     }
 
     // Generate a structured brief first — this feeds Gamma a much better input than raw transcript
+    let briefThrew = false;
     const brief = await generateMeetingBrief(segments, title, meeting.start_time, participantNames).catch((err) => {
+      briefThrew = true;
       console.error("Claude brief failed, falling back to raw transcript:", err);
       Sentry.captureException(err, {
         tags: { component: "claude_brief_throw", source: "recall_webhook" },
@@ -228,6 +230,26 @@ async function processMeeting(
       return { summary: "", actionItems: "", gammaBrief: "", numCards: 8 };
     });
     const { summary, actionItems, gammaBrief, numCards } = brief;
+
+    // Post-condition: brief came back without throwing but is missing the
+    // load-bearing fields. Means Claude/lib produced an empty result through
+    // a non-thrown path — silent failure. Surface explicitly so we don't
+    // ship another "all-empty" meeting like T<>AL on 2026-04-28.
+    if (!briefThrew && (!summary || !gammaBrief)) {
+      Sentry.captureMessage("Meeting brief empty without exception", {
+        level: "warning",
+        tags: { component: "claude_brief_empty", source: "recall_webhook" },
+        extra: {
+          meetingId: meeting.id,
+          title,
+          hasSummary: !!summary,
+          hasGammaBrief: !!gammaBrief,
+          actionItemsLength: actionItems.length,
+          numCards,
+          transcriptSegments: segments.length,
+        },
+      });
+    }
 
     // Prefer the structured brief; fall back to raw transcript formatting if the brief is empty
     const gammaInput = gammaBrief || buildPromptFromRecallTranscript(title, meeting.start_time, participantNames, segments);
@@ -243,12 +265,20 @@ async function processMeeting(
       throw new Error(`DB update failed: ${updateErr.message}`);
     }
 
-    // Optional update — summary/action_items may fail if columns missing
+    // Optional update — summary/action_items may fail if columns missing.
+    // Capture in Sentry too so a column-missing migration regression doesn't
+    // silently hide the brief.
     const { error: extraErr } = await supabase
       .from("meetings")
       .update({ summary, action_items: actionItems })
       .eq("id", meeting.id);
-    if (extraErr) console.error("Summary/actions update failed (non-fatal):", extraErr);
+    if (extraErr) {
+      console.error("Summary/actions update failed (non-fatal):", extraErr);
+      Sentry.captureException(extraErr, {
+        tags: { component: "db_update_summary", source: "recall_webhook" },
+        extra: { meetingId: meeting.id },
+      });
+    }
 
     // Optional — gamma_brief column may not exist yet. This is what Claude
     // distilled from the transcript (the input we fed to Gamma).
@@ -256,14 +286,26 @@ async function processMeeting(
       .from("meetings")
       .update({ gamma_brief: gammaBrief })
       .eq("id", meeting.id);
-    if (bErr) console.error("gamma_brief update failed (non-fatal):", bErr);
+    if (bErr) {
+      console.error("gamma_brief update failed (non-fatal):", bErr);
+      Sentry.captureException(bErr, {
+        tags: { component: "db_update_gamma_brief", source: "recall_webhook" },
+        extra: { meetingId: meeting.id },
+      });
+    }
 
     // Optional — transcript_text column may not exist yet
     const { error: tErr } = await supabase
       .from("meetings")
       .update({ transcript_text: transcriptToText(segments) })
       .eq("id", meeting.id);
-    if (tErr) console.error("transcript_text update failed (non-fatal):", tErr);
+    if (tErr) {
+      console.error("transcript_text update failed (non-fatal):", tErr);
+      Sentry.captureException(tErr, {
+        tags: { component: "db_update_transcript", source: "recall_webhook" },
+        extra: { meetingId: meeting.id },
+      });
+    }
 
     if (allEmails.length > 0) {
       // Atomic single-shot send guard. Only the worker that flips
@@ -301,6 +343,10 @@ async function processMeeting(
     // Release the processing claim so future retries can succeed
     await supabase.from("meetings").update({ bot_status: "ended" }).eq("id", meeting.id);
     console.error("Recall processing failed:", err);
+    Sentry.captureException(err, {
+      tags: { component: "process_meeting_throw", source: "recall_webhook" },
+      extra: { meetingId: meeting.id, botId },
+    });
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }

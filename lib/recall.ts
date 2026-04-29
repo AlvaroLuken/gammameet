@@ -273,6 +273,11 @@ export async function generateMeetingBrief(
 ): Promise<MeetingBrief> {
   if (!process.env.ANTHROPIC_API_KEY) {
     console.warn("ANTHROPIC_API_KEY not set, skipping LLM brief");
+    Sentry.captureMessage("ANTHROPIC_API_KEY missing — meeting brief skipped", {
+      level: "error",
+      tags: { component: "claude_brief_config" },
+      extra: { meetingTitle, participantCount: participants.length },
+    });
     return { summary: "", actionItems: "", gammaBrief: "", numCards: 8 };
   }
 
