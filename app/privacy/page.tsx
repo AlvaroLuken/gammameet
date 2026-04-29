@@ -15,7 +15,7 @@ export default function PrivacyPage() {
       <main className="max-w-2xl mx-auto px-6 md:px-8 py-12 md:py-16 space-y-8 text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
         <div>
           <h1 className="text-3xl font-bold text-zinc-900 dark:text-white mb-2">Privacy Policy</h1>
-          <p className="text-zinc-400">Last updated: April 19, 2026</p>
+          <p className="text-zinc-400">Last updated: April 29, 2026</p>
         </div>
 
         <section className="space-y-3">
@@ -28,7 +28,7 @@ export default function PrivacyPage() {
           <ul className="list-disc list-inside space-y-2">
             <li><strong className="text-zinc-700 dark:text-zinc-300">Google account info</strong> — your name, email address, and profile photo when you sign in.</li>
             <li><strong className="text-zinc-700 dark:text-zinc-300">Google Calendar data</strong> — we read your calendar to find upcoming meetings with video links so we can schedule a recording bot. We only read event titles, times, attendees, and video conference links.</li>
-            <li><strong className="text-zinc-700 dark:text-zinc-300">Meeting recordings and transcripts</strong> — audio is recorded and transcribed during meetings where GammaMeet Notetaker has been admitted. Transcripts are used solely to generate your presentation deck.</li>
+            <li><strong className="text-zinc-700 dark:text-zinc-300">Meeting recordings and transcripts</strong> — audio is recorded and transcribed during meetings where GammaMeet Notetaker has been admitted. Transcripts are used to generate your presentation deck. The audio recording itself is stored by our recording provider (Recall.ai) and is available to meeting attendees for download for a limited time before being automatically deleted.</li>
             <li><strong className="text-zinc-700 dark:text-zinc-300">Meeting metadata</strong> — titles, dates, attendee email addresses.</li>
           </ul>
         </section>
@@ -57,7 +57,7 @@ export default function PrivacyPage() {
 
         <section className="space-y-3">
           <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Data retention</h2>
-          <p>Meeting transcripts are used to generate your deck and are not stored by GammaMeet beyond what is necessary to provide the service. Generated decks are stored and accessible via your dashboard until you delete them.</p>
+          <p>Meeting transcripts are used to generate your deck and are not stored by GammaMeet beyond what is necessary to provide the service. Generated decks are stored and accessible via your dashboard until you delete them. Audio recordings are hosted by Recall.ai and made available to attendees for download for a limited retention window; GammaMeet does not keep its own copy. Once Recall's retention period ends, the recording is no longer available.</p>
         </section>
 
         <section className="space-y-3">

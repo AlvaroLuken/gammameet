@@ -14,6 +14,17 @@ import { AttendeeRow } from "@/components/AttendeeRow";
 import { BriefToggle } from "@/components/BriefToggle";
 import { TranscriptToggle } from "@/components/TranscriptToggle";
 
+// Bots created before this deploy don't have audio_mixed_mp3 in their
+// Recall recording_config, so the download will always 410. Hide the
+// menu entry for them so users don't see a dead button.
+const AUDIO_FEATURE_RELEASED_AT = new Date("2026-04-29T09:35:00Z");
+
+function hasAudioRecording(meeting: { recall_bot_id: string | null; created_at?: string | null }): boolean {
+  if (!meeting.recall_bot_id) return false;
+  if (!meeting.created_at) return false;
+  return new Date(meeting.created_at) >= AUDIO_FEATURE_RELEASED_AT;
+}
+
 export default async function MeetingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await auth();
@@ -90,7 +101,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
             {meeting.transcript_text && <TranscriptToggle text={meeting.transcript_text} />}
           </div>
 
-          <ActionsMenu id={id} gammaUrl={meeting.gamma_url} exportUrl={meeting.export_url} title={meeting.title} />
+          <ActionsMenu id={id} gammaUrl={meeting.gamma_url} exportUrl={meeting.export_url} title={meeting.title} hasRecording={hasAudioRecording(meeting)} />
         </aside>
 
         {/* Deck viewer */}

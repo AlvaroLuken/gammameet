@@ -87,7 +87,11 @@ const SECTIONS = [
       },
       {
         q: "Where are my recordings stored?",
-        a: "Audio is transcribed in real time and not retained after processing. Transcripts and decks are stored securely on our infrastructure (Supabase + Gamma) and are accessible only to authenticated attendees.",
+        a: "Audio is transcribed in real time. The audio recording itself is stored by our recording provider (Recall.ai) for a limited retention window so attendees can download it; GammaMeet does not keep its own copy. Transcripts and decks are stored securely on our infrastructure (Supabase + Gamma) and are accessible only to authenticated attendees.",
+      },
+      {
+        q: "Can I download the audio of a meeting?",
+        a: "Yes — open the meeting in your dashboard and use the \"Download audio\" action. Recordings are available for download for a limited time after the meeting; once Recall.ai's retention period ends, the link will return a \"recording download period has ended\" message.",
       },
       {
         q: "Can I delete a deck?",

@@ -38,7 +38,10 @@ export async function createBot({
   const body: Record<string, unknown> = {
     meeting_url: meetingUrl,
     bot_name: "Jim from GammaMeet",
-    recording_config: { transcript: { provider: { recallai_streaming: {} } } },
+    recording_config: {
+      transcript: { provider: { recallai_streaming: {} } },
+      audio_mixed_mp3: {},
+    },
     automatic_video_output: {
       in_call_recording: { kind: "jpeg", b64_data: getBotAvatarB64() },
     },
@@ -46,7 +49,7 @@ export async function createBot({
       on_bot_join: {
         send_to: "everyone",
         message:
-          "👋 Hi, I'm Jim from GammaMeet. I'll transcribe this call and email an AI-generated recap deck to all attendees when it ends. Learn more: https://www.gamma-meet.com/faq",
+          "👋 Hi, I'm Jim from GammaMeet. I'll record and transcribe this call and email an AI-generated recap deck to all attendees when it ends. The audio recording is available to attendees for download for a limited time. Learn more: https://www.gamma-meet.com/faq",
         pin: true,
       },
     },
@@ -155,6 +158,20 @@ export async function getBotData(botId: string): Promise<BotData> {
 
 export async function getTranscript(botId: string): Promise<RecallTranscriptSegment[]> {
   return (await getBotData(botId)).segments;
+}
+
+/**
+ * Pull a fresh signed download URL for the bot's mixed audio recording.
+ * Returns null when no recording is available (e.g. bot was created before
+ * audio output was enabled, or Recall has aged out the underlying file).
+ */
+export async function getAudioDownloadUrl(botId: string): Promise<string | null> {
+  const res = await fetch(`${RECALL_BASE}/bot/${botId}/`, { headers: recallHeaders() });
+  if (!res.ok) return null;
+  const bot = await res.json();
+  const recording = bot.recordings?.[0];
+  const url = recording?.media_shortcuts?.audio_mixed?.data?.download_url;
+  return typeof url === "string" && url.length > 0 ? url : null;
 }
 
 export function inferTitleFromSegments(segments: RecallTranscriptSegment[]): string {

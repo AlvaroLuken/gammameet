@@ -9,15 +9,18 @@ interface Props {
   gammaUrl: string | null;
   exportUrl: string | null;
   title?: string;
+  hasRecording?: boolean;
 }
 
-export function ActionsMenu({ id, gammaUrl, exportUrl, title }: Props) {
+export function ActionsMenu({ id, gammaUrl, exportUrl, title, hasRecording }: Props) {
   const { setRegenerating: setCtxRegenerating } = useMeetingRegen();
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [downloadingAudio, setDownloadingAudio] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
   const [regenerating, setRegenerating] = useState(false);
   const [regenError, setRegenError] = useState<string | null>(null);
   const [confirmingRegen, setConfirmingRegen] = useState(false);
@@ -71,6 +74,35 @@ export function ActionsMenu({ id, gammaUrl, exportUrl, title }: Props) {
       setRegenError("Regenerate failed");
       setRegenerating(false);
       window.location.reload();
+    }
+  };
+
+  const handleDownloadAudio = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (downloadingAudio) return;
+    setAudioError(null);
+    setDownloadingAudio(true);
+    try {
+      const res = await fetch(`/api/meetings/${id}/audio`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setAudioError(body.reason ?? "Recording is no longer available.");
+        return;
+      }
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = `${(title ?? "recording").replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.mp3`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch (err) {
+      console.error("Audio download failed:", err);
+      setAudioError("Recording download failed.");
+    } finally {
+      setDownloadingAudio(false);
     }
   };
 
@@ -137,6 +169,21 @@ export function ActionsMenu({ id, gammaUrl, exportUrl, title }: Props) {
               <span>↓</span>
               {downloading ? "Downloading…" : "Download PDF"}
             </button>
+          )}
+          {hasRecording && (
+            <>
+              <button
+                onClick={handleDownloadAudio}
+                disabled={downloadingAudio}
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-t border-zinc-100 dark:border-zinc-800 cursor-pointer disabled:opacity-50"
+              >
+                <span>♪</span>
+                {downloadingAudio ? "Downloading…" : "Download audio"}
+              </button>
+              {audioError && (
+                <p className="px-4 pb-2 text-xs text-zinc-500 dark:text-zinc-400 border-t border-zinc-100 dark:border-zinc-800">{audioError}</p>
+              )}
+            </>
           )}
           <button
             onClick={copyLink}
