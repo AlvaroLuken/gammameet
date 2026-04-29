@@ -122,15 +122,28 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       .eq("id", id);
     if (tErr) console.error("transcript_text update failed (non-fatal):", tErr);
 
-    const recipients = invitedEmails.length > 0 ? invitedEmails : [session.user.email];
-    const gammaMeetUrl = `${process.env.APP_URL ?? "https://gammameet.vercel.app"}/meetings/${id}`;
-    await sendRecapEmail({
-      to: recipients,
-      meetingTitle: title,
-      meetingDate: meeting.start_time,
-      gammaUrl: gammaMeetUrl,
-      previewImage,
-    }).catch((err) => console.error("Recap email failed (non-fatal):", err));
+    // Atomic single-shot send guard — see webhook/recall for rationale.
+    const { data: emailClaim } = await supabase
+      .from("meetings")
+      .update({ recap_emailed_at: new Date().toISOString() })
+      .eq("id", id)
+      .is("recap_emailed_at", null)
+      .select("id")
+      .maybeSingle();
+
+    if (emailClaim) {
+      const recipients = invitedEmails.length > 0 ? invitedEmails : [session.user.email];
+      const gammaMeetUrl = `${process.env.APP_URL ?? "https://gammameet.vercel.app"}/meetings/${id}`;
+      await sendRecapEmail({
+        to: recipients,
+        meetingTitle: title,
+        meetingDate: meeting.start_time,
+        gammaUrl: gammaMeetUrl,
+        previewImage,
+      }).catch((err) => console.error("Recap email failed (non-fatal):", err));
+    } else {
+      console.log(`Record: recap email already sent for ${id} — skipping`);
+    }
 
     return NextResponse.json({ ok: true, gammaUrl, meetingId: id });
   } catch (err) {

@@ -261,14 +261,30 @@ async function processMeeting(
     if (tErr) console.error("transcript_text update failed (non-fatal):", tErr);
 
     if (allEmails.length > 0) {
-      const gammaMeetUrl = `${process.env.APP_URL ?? "https://gammameet.vercel.app"}/meetings/${meeting.id}`;
-      await sendRecapEmail({
-        to: allEmails,
-        meetingTitle: title,
-        meetingDate: meeting.start_time,
-        gammaUrl: gammaMeetUrl,
-        previewImage,
-      }).catch((err) => console.error("Email send failed:", err));
+      // Atomic single-shot send guard. Only the worker that flips
+      // recap_emailed_at from null to now() will fire emails — protects
+      // against dual webhooks, dual bots, or any other path that lands
+      // here twice for the same meeting.
+      const { data: emailClaim } = await supabase
+        .from("meetings")
+        .update({ recap_emailed_at: new Date().toISOString() })
+        .eq("id", meeting.id)
+        .is("recap_emailed_at", null)
+        .select("id")
+        .maybeSingle();
+
+      if (emailClaim) {
+        const gammaMeetUrl = `${process.env.APP_URL ?? "https://gammameet.vercel.app"}/meetings/${meeting.id}`;
+        await sendRecapEmail({
+          to: allEmails,
+          meetingTitle: title,
+          meetingDate: meeting.start_time,
+          gammaUrl: gammaMeetUrl,
+          previewImage,
+        }).catch((err) => console.error("Email send failed:", err));
+      } else {
+        console.log(`Recall: recap email already sent for ${meeting.id} — skipping`);
+      }
     }
 
     // Flip bot_status back to "ended" so the lifecycle is clean
