@@ -5,6 +5,7 @@ import { transcribeAudioUrl } from "@/lib/deepgram";
 import { generateMeetingBrief, buildPromptFromRecallTranscript, transcriptToText } from "@/lib/recall";
 import { generateGammaPage } from "@/lib/gamma";
 import { sendRecapEmail } from "@/lib/email";
+import * as Sentry from "@sentry/nextjs";
 
 export const maxDuration = 300;
 
@@ -82,6 +83,10 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
     const brief = await generateMeetingBrief(segments, title, meeting.start_time, participantNames).catch((err) => {
       console.error("Claude brief failed during record processing:", err);
+      Sentry.captureException(err, {
+        tags: { component: "claude_brief_throw", source: "record_process" },
+        extra: { meetingId: id, title, transcriptSegments: segments.length },
+      });
       return { summary: "", actionItems: "", gammaBrief: "", numCards: 8 };
     });
 

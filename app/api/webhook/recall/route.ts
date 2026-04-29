@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { getBotData, getBotMetadata, buildPromptFromRecallTranscript, inferTitleFromSegments, generateMeetingBrief, transcriptToText } from "@/lib/recall";
 import { generateGammaPage } from "@/lib/gamma";
 import { sendRecapEmail } from "@/lib/email";
+import * as Sentry from "@sentry/nextjs";
 
 export const maxDuration = 300;
 
@@ -220,6 +221,10 @@ async function processMeeting(
     // Generate a structured brief first — this feeds Gamma a much better input than raw transcript
     const brief = await generateMeetingBrief(segments, title, meeting.start_time, participantNames).catch((err) => {
       console.error("Claude brief failed, falling back to raw transcript:", err);
+      Sentry.captureException(err, {
+        tags: { component: "claude_brief_throw", source: "recall_webhook" },
+        extra: { meetingId: meeting.id, title, transcriptSegments: segments.length },
+      });
       return { summary: "", actionItems: "", gammaBrief: "", numCards: 8 };
     });
     const { summary, actionItems, gammaBrief, numCards } = brief;

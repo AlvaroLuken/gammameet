@@ -201,6 +201,7 @@ export async function getBotMetadata(botId: string): Promise<Record<string, stri
 }
 
 import Anthropic from "@anthropic-ai/sdk";
+import * as Sentry from "@sentry/nextjs";
 
 export function transcriptToText(segments: RecallTranscriptSegment[]): string {
   return segments
@@ -307,15 +308,45 @@ Participants: ${participants.join(", ")}
 Transcript:
 ${text}`;
 
+  // Sized for very long meetings (multi-hour). Output isn't strictly
+  // proportional to input — the brief is still bounded by the 14-slide cap —
+  // but a dense 3-5h meeting can produce a gammaBrief that overflows a
+  // tight budget, so leave generous headroom here.
   const res = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 3000,
+    max_tokens: 8000,
     system: systemPrompt,
     messages: [{ role: "user", content: userMessage }],
   });
 
+  const briefContext = {
+    meetingTitle,
+    meetingType: resolvedType,
+    transcriptChars: text.length,
+    participantCount: participants.length,
+    stopReason: res.stop_reason,
+    inputTokens: res.usage?.input_tokens,
+    outputTokens: res.usage?.output_tokens,
+  };
+
+  // Truncation = parse will probably fail. Surface as a distinct Sentry
+  // signal so we can tell "Claude got cut off" apart from "Claude returned
+  // garbage" when triaging.
+  if (res.stop_reason === "max_tokens") {
+    Sentry.captureMessage("Claude meeting brief hit max_tokens", {
+      level: "warning",
+      extra: briefContext,
+    });
+  }
+
   const content = res.content[0];
-  if (content.type !== "text") return { summary: "", actionItems: "", gammaBrief: "", numCards: 8 };
+  if (content.type !== "text") {
+    Sentry.captureMessage("Claude meeting brief returned non-text content", {
+      level: "warning",
+      extra: { ...briefContext, contentType: content.type },
+    });
+    return { summary: "", actionItems: "", gammaBrief: "", numCards: 8 };
+  }
 
   try {
     const match = content.text.match(/\{[\s\S]*\}/);
@@ -343,6 +374,13 @@ ${text}`;
     return { summary, actionItems, gammaBrief, numCards };
   } catch (err) {
     console.error("Failed to parse Claude brief response:", err, content.text);
+    Sentry.captureException(err, {
+      tags: { component: "claude_brief_parse" },
+      extra: {
+        ...briefContext,
+        rawClaudeResponse: content.text,
+      },
+    });
     return { summary: "", actionItems: "", gammaBrief: "", numCards: 8 };
   }
 }
