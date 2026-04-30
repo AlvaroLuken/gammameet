@@ -81,13 +81,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           isNewUser = !existing;
         }
 
+        const upsertPayload: Record<string, unknown> = {
+          email: token.email,
+          name: token.name,
+          image: token.picture,
+        };
+        // Only touch the refresh token when Google actually returned one.
+        // On repeat consent grants Google may omit refresh_token; writing
+        // null then would wipe a still-valid stored token. When we DO get
+        // a fresh one, also clear needs_reauth — re-auth just succeeded,
+        // so the dashboard banner should disappear immediately instead of
+        // waiting for the next cron sync to flip it.
+        if (account.refresh_token) {
+          upsertPayload.google_refresh_token = account.refresh_token;
+          upsertPayload.needs_reauth = false;
+        }
         const { error: upsertErr } = await supabase.from("users").upsert(
-          {
-            email: token.email,
-            name: token.name,
-            image: token.picture,
-            google_refresh_token: account.refresh_token ?? null,
-          },
+          upsertPayload,
           { onConflict: "email" }
         );
         if (upsertErr) {
