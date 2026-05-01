@@ -296,14 +296,7 @@ ${typeGuidance}
 
 Write as a clear analyst, not a note-taker. Organize by theme, not chronology. Lead with WHY things matter, not just WHAT was said. Use the participants' actual words as quotes when they're pithy or load-bearing. Skip filler — no "we then talked about" summaries of summaries.
 
-Return strict JSON with exactly these four fields, no prose outside the JSON:
-
-{
-  "summary": "2-4 sentences. What was this meeting about, what got decided, and why does it matter? Not a retelling — a takeaway. Write for someone who wasn't there.",
-  "actionItems": ["Extract every next step, follow-up, task, and commitment from the meeting — not just formal assignments. Include loosely-committed items ('we should look into X', 'I'll probably reach out to Y') and implicit ones ('we need to figure out Z'). Include the owner if mentioned (e.g. \\"Alice: Ship the dashboard mockup by Friday\\"). If the owner is unclear, lead with the action alone. Aim for 3-10 items for a typical 15+ minute meeting. Only return empty if the conversation was truly non-actionable (e.g. social chat). Don't invent tasks that weren't discussed, but don't be stingy either."],
-  "gammaBrief": "A structured markdown document Gamma will turn into a presentation. Use H1 for the title, H2 for major sections. Use section structure that fits this meeting type — don't blindly follow a template if it doesn't fit. Default sections to include unless the type guidance above suggests otherwise: TL;DR, Key Decisions, Action Items, Core Themes (the meat — one sub-section per topic with insight and attributed quotes), Open Questions, Notable Quotes, Participants, Next Steps.",
-  "numCards": "Integer between 4 and 14 — how many slides this meeting's deck should have, based on the richness and breadth of content. A 5-min standup with one decision: 4-5. A typical 30-min meeting: 7-9. An hour-long discussion with many distinct topics or a dense customer call: 10-14. Match slide count to content, don't pad or compress."
-}`;
+Submit your brief by invoking the submit_meeting_brief tool. Don't return any prose outside the tool call.`;
 
   const userMessage = `Meeting: ${meetingTitle}
 Type: ${resolvedType}
@@ -313,14 +306,46 @@ Participants: ${participants.join(", ")}
 Transcript:
 ${text}`;
 
-  // Sized for very long meetings (multi-hour). Output isn't strictly
-  // proportional to input — the brief is still bounded by the 14-slide cap —
-  // but a dense 3-5h meeting can produce a gammaBrief that overflows a
-  // tight budget, so leave generous headroom here.
+  // Force structured output via tool use rather than asking Claude to embed
+  // JSON in free text. The SDK gives us toolUse.input as already-parsed
+  // structured data — eliminates the JSON.parse failure class (e.g.,
+  // unescaped quotes inside verbatim transcript pulls in gammaBrief).
+  const briefTool = {
+    name: "submit_meeting_brief",
+    description: "Submit the structured meeting brief: summary, action items, presentation deck markdown, and recommended slide count.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        summary: {
+          type: "string",
+          description: "2-4 sentences. What was this meeting about, what got decided, and why does it matter? Not a retelling — a takeaway. Write for someone who wasn't there.",
+        },
+        actionItems: {
+          type: "array",
+          items: { type: "string" },
+          description: "Every next step, follow-up, task, and commitment from the meeting — not just formal assignments. Include loosely-committed items ('we should look into X', 'I'll probably reach out to Y') and implicit ones ('we need to figure out Z'). Include the owner if mentioned (e.g. 'Alice: Ship the dashboard mockup by Friday'). Aim for 3-10 items for a typical 15+ minute meeting. Empty array only if the conversation was truly non-actionable.",
+        },
+        gammaBrief: {
+          type: "string",
+          description: "Structured markdown Gamma will turn into a presentation. Use H1 for the title, H2 for major sections. Default sections unless type guidance suggests otherwise: TL;DR, Key Decisions, Action Items, Core Themes (one sub-section per topic with insight and attributed quotes), Open Questions, Notable Quotes, Participants, Next Steps.",
+        },
+        numCards: {
+          type: "integer",
+          minimum: 4,
+          maximum: 14,
+          description: "Number of slides this deck should have, based on richness and breadth. A 5-min standup with one decision: 4-5. A typical 30-min meeting: 7-9. An hour-long discussion with many distinct topics or a dense customer call: 10-14. Match slide count to content; don't pad or compress.",
+        },
+      },
+      required: ["summary", "actionItems", "gammaBrief", "numCards"],
+    },
+  };
+
   const res = await client.messages.create({
     model: "claude-haiku-4-5-20251001",
     max_tokens: 8000,
     system: systemPrompt,
+    tools: [briefTool],
+    tool_choice: { type: "tool", name: "submit_meeting_brief" },
     messages: [{ role: "user", content: userMessage }],
   });
 
@@ -334,9 +359,8 @@ ${text}`;
     outputTokens: res.usage?.output_tokens,
   };
 
-  // Truncation = parse will probably fail. Surface as a distinct Sentry
-  // signal so we can tell "Claude got cut off" apart from "Claude returned
-  // garbage" when triaging.
+  // Truncation can cut off tool-input mid-emission, leaving us without a
+  // valid tool_use block. Distinguish from "Claude refused" in triage.
   if (res.stop_reason === "max_tokens") {
     Sentry.captureMessage("Claude meeting brief hit max_tokens", {
       level: "warning",
@@ -344,50 +368,46 @@ ${text}`;
     });
   }
 
-  const content = res.content[0];
-  if (content.type !== "text") {
-    Sentry.captureMessage("Claude meeting brief returned non-text content", {
+  const toolUse = res.content.find((b) => b.type === "tool_use");
+  if (!toolUse || toolUse.type !== "tool_use" || toolUse.name !== "submit_meeting_brief") {
+    Sentry.captureMessage("Claude did not return submit_meeting_brief tool call", {
       level: "warning",
-      extra: { ...briefContext, contentType: content.type },
+      tags: { component: "claude_brief_no_tool_use" },
+      extra: { ...briefContext, contentBlockTypes: res.content.map((b) => b.type) },
     });
     return { summary: "", actionItems: "", gammaBrief: "", numCards: 8 };
   }
 
-  try {
-    const match = content.text.match(/\{[\s\S]*\}/);
-    const parsed = JSON.parse(match ? match[0] : content.text);
-    const actions: string[] = Array.isArray(parsed.actionItems) ? parsed.actionItems : [];
-    const summary = String(parsed.summary ?? "").trim();
-    const gammaBrief = String(parsed.gammaBrief ?? "").trim();
-    const rawNumCards = Number(parsed.numCards);
-    const numCards = Number.isFinite(rawNumCards)
-      ? Math.min(14, Math.max(4, Math.round(rawNumCards)))
-      : 8;
+  const input = toolUse.input as {
+    summary?: unknown;
+    actionItems?: unknown;
+    gammaBrief?: unknown;
+    numCards?: unknown;
+  };
 
-    // Fallback: if Claude returned an empty actionItems array but wrote them
-    // under "## Action Items" in gammaBrief, extract them from there.
-    let actionItems = actions.map((a) => "· " + a).join("\n");
-    if (!actionItems && gammaBrief) {
-      const extracted = extractActionItemsFromMarkdown(gammaBrief);
-      if (extracted.length > 0) {
-        actionItems = extracted.map((a) => "· " + a).join("\n");
-        console.log(`[brief] Extracted ${extracted.length} action items from markdown fallback`);
-      }
+  const summary = typeof input.summary === "string" ? input.summary.trim() : "";
+  const gammaBrief = typeof input.gammaBrief === "string" ? input.gammaBrief.trim() : "";
+  const actions: string[] = Array.isArray(input.actionItems)
+    ? input.actionItems.filter((a): a is string => typeof a === "string")
+    : [];
+  const rawNumCards = Number(input.numCards);
+  const numCards = Number.isFinite(rawNumCards)
+    ? Math.min(14, Math.max(4, Math.round(rawNumCards)))
+    : 8;
+
+  // Fallback: if Claude returned an empty actionItems array but wrote them
+  // under "## Action Items" in gammaBrief, extract them from there.
+  let actionItems = actions.map((a) => "· " + a).join("\n");
+  if (!actionItems && gammaBrief) {
+    const extracted = extractActionItemsFromMarkdown(gammaBrief);
+    if (extracted.length > 0) {
+      actionItems = extracted.map((a) => "· " + a).join("\n");
+      console.log(`[brief] Extracted ${extracted.length} action items from markdown fallback`);
     }
-
-    console.log(`[brief] Claude returned: summary=${summary.length}ch, actionItems=${actions.length}, gammaBrief=${gammaBrief.length}ch, numCards=${numCards}`);
-    return { summary, actionItems, gammaBrief, numCards };
-  } catch (err) {
-    console.error("Failed to parse Claude brief response:", err, content.text);
-    Sentry.captureException(err, {
-      tags: { component: "claude_brief_parse" },
-      extra: {
-        ...briefContext,
-        rawClaudeResponse: content.text,
-      },
-    });
-    return { summary: "", actionItems: "", gammaBrief: "", numCards: 8 };
   }
+
+  console.log(`[brief] Claude returned: summary=${summary.length}ch, actionItems=${actions.length}, gammaBrief=${gammaBrief.length}ch, numCards=${numCards}`);
+  return { summary, actionItems, gammaBrief, numCards };
 }
 
 function extractActionItemsFromMarkdown(md: string): string[] {
