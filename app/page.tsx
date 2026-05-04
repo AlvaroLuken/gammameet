@@ -49,9 +49,7 @@ export default async function Home() {
 
       {/* Hero */}
       <section className="max-w-4xl mx-auto px-8 py-28 text-center space-y-8">
-        <div className="inline-flex items-center gap-2 bg-violet-100 dark:bg-violet-950 text-violet-600 dark:text-violet-400 text-sm font-semibold px-4 py-1.5 rounded-full">
-          ✦ Powered by Gamma AI
-        </div>
+        <MadeWithGammaBadge />
         <h1 className="text-6xl sm:text-7xl font-bold tracking-tight leading-none">
           Every meeting,<br />
           <span className="text-violet-500">beautifully decked.</span>
