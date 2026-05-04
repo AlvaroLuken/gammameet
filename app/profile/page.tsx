@@ -181,6 +181,25 @@ export default async function ProfilePage() {
           <DeleteAccountButton />
         </div>
 
+        {/* Gamma technical info */}
+        <Link
+          href="/gamma-technical-info"
+          className="block bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 hover:border-violet-300 dark:hover:border-violet-700 transition-colors group"
+        >
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-1.5">
+              <h2 className="font-semibold text-lg flex items-center gap-2">
+                <span>How GammaMeet uses the Gamma API</span>
+                <span className="text-xs font-normal text-violet-500 bg-violet-50 dark:bg-violet-950 px-2 py-0.5 rounded-full">Technical</span>
+              </h2>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                Endpoints, request/response shapes, and where each Gamma call fires in the pipeline. For anyone curious about the integration internals.
+              </p>
+            </div>
+            <span className="text-violet-500 group-hover:translate-x-0.5 transition-transform shrink-0" aria-hidden="true">→</span>
+          </div>
+        </Link>
+
         {/* Feedback */}
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 space-y-2">
           <h2 className="font-semibold text-lg">Feedback</h2>
