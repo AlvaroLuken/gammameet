@@ -3,6 +3,7 @@ import Link from "next/link";
 import { signIn, auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { MadeWithGammaBadge } from "@/components/MadeWithGammaBadge";
 
 export const metadata: Metadata = {
   title: "Sign in · GammaMeet",
@@ -96,10 +97,15 @@ export default async function BetaAccessPage({ searchParams }: { searchParams: P
         </div>
       </section>
 
-      <footer className="border-t border-zinc-200 dark:border-zinc-800 px-8 py-6 text-center text-zinc-400 text-xs space-x-4">
-        <Link href="/" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Home</Link>
-        <Link href="/privacy" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Privacy</Link>
-        <Link href="/terms" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Terms</Link>
+      <footer className="border-t border-zinc-200 dark:border-zinc-800 px-8 py-6 text-center text-zinc-400 text-xs space-y-3">
+        <div className="space-x-4">
+          <Link href="/" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Home</Link>
+          <Link href="/privacy" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Privacy</Link>
+          <Link href="/terms" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Terms</Link>
+        </div>
+        <div className="flex justify-center">
+          <MadeWithGammaBadge />
+        </div>
       </footer>
     </main>
   );

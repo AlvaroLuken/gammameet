@@ -3,6 +3,7 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { MadeWithGammaBadge } from "@/components/MadeWithGammaBadge";
 
 export const metadata: Metadata = {
   title: "GammaMeet — Every meeting, beautifully decked",
@@ -248,6 +249,9 @@ export default async function Home() {
           <a href="https://www.al-luken.space/" target="_blank" rel="noopener noreferrer" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Feedback</a>
           <a href="/privacy" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Privacy</a>
           <a href="/terms" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Terms</a>
+        </div>
+        <div className="pt-2 flex justify-center">
+          <MadeWithGammaBadge />
         </div>
       </footer>
     </main>

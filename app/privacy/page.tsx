@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { MadeWithGammaBadge } from "@/components/MadeWithGammaBadge";
 
 export const metadata: Metadata = { title: "Privacy Policy — GammaMeet" };
 
@@ -71,9 +72,14 @@ export default function PrivacyPage() {
         </section>
       </main>
 
-      <footer className="border-t border-zinc-200 dark:border-zinc-800 px-8 py-6 text-center text-zinc-400 text-sm space-x-4">
-        <Link href="/terms" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Terms of Service</Link>
-        <Link href="/" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Home</Link>
+      <footer className="border-t border-zinc-200 dark:border-zinc-800 px-8 py-6 text-center text-zinc-400 text-sm space-y-3">
+        <div className="space-x-4">
+          <Link href="/terms" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Terms of Service</Link>
+          <Link href="/" className="hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors">Home</Link>
+        </div>
+        <div className="flex justify-center">
+          <MadeWithGammaBadge />
+        </div>
       </footer>
     </div>
   );
