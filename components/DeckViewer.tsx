@@ -24,18 +24,6 @@ export function DeckViewer({ exportUrl }: { exportUrl: string }) {
   // Route the PDF through our own origin so PDF.js can fetch without CORS issues
   const fileUrl = `/api/deck-proxy?url=${encodeURIComponent(exportUrl)}`;
 
-  // Fallback: if PDF.js fails to load, use the native PDF embed so users still see the deck
-  if (loadFailed) {
-    return (
-      <embed
-        src={`${exportUrl}#toolbar=0&navpanes=0&scrollbar=0&statusbar=0`}
-        type="application/pdf"
-        className="w-full rounded-xl"
-        style={{ height: "min(calc(100vh - 120px), 80vw)" }}
-      />
-    );
-  }
-
   // Track container width to render PDF pages at the right size
   useEffect(() => {
     if (!containerRef.current) return;
@@ -76,6 +64,20 @@ export function DeckViewer({ exportUrl }: { exportUrl: string }) {
   const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
   }, []);
+
+  // Fallback: if PDF.js fails to load, use the native PDF embed so users still
+  // see the deck. Must come AFTER all hooks above — early-returning above the
+  // hooks violates Rules of Hooks ("Rendered fewer hooks than expected").
+  if (loadFailed) {
+    return (
+      <embed
+        src={`${exportUrl}#toolbar=0&navpanes=0&scrollbar=0&statusbar=0`}
+        type="application/pdf"
+        className="w-full rounded-xl"
+        style={{ height: "min(calc(100vh - 120px), 80vw)" }}
+      />
+    );
+  }
 
   const jumpToPage = (n: number) => {
     setCurrentPage(n);
