@@ -96,6 +96,12 @@ export async function scheduleBotsForUser(userId: string, userEmail: string, acc
     // User explicitly dismissed this event — don't re-insert or reschedule
     if (existing?.dismissed_at) continue;
 
+    // Did we discover this row via the meet_link fallback (i.e., it was
+    // originally inserted by /api/add-bot before the calendar event was known)?
+    // If so we must NOT reschedule its bot below — the bot is already in the
+    // call and recreating it would result in two bots in the meeting.
+    let discoveredViaMeetLink = false;
+
     if (!existing) {
       const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString();
       const { data: byLink } = await supabase
@@ -111,6 +117,7 @@ export async function scheduleBotsForUser(userId: string, userEmail: string, acc
       if (existing) {
         // Claim this ad-hoc meeting as the calendar one
         await supabase.from("meetings").update({ calendar_event_id: m.id }).eq("id", existing.id);
+        discoveredViaMeetLink = true;
       }
     }
 
@@ -182,6 +189,12 @@ export async function scheduleBotsForUser(userId: string, userEmail: string, acc
 
       if (!existing.recall_bot_id) {
         shouldCreateBot = true;
+      } else if (discoveredViaMeetLink) {
+        // We just claimed an ad-hoc meeting as the calendar one. Its bot is
+        // already in the call — the start_time mismatch is an artifact of
+        // /api/add-bot stamping start_time = now, not a real calendar move.
+        // Never reschedule here; that would put a second bot in the meeting.
+        continue;
       } else if (!botHasJoined && !botDidFail && startDriftMin > 2) {
         // Reschedule: kill old bot, clear status, create new one
         try {
