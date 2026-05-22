@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { buildPromptFromFathomPayload, FathomWebhookPayload } from "@/lib/fathom";
 import { generateGammaPage } from "@/lib/gamma";
+import { archiveGammaPdf } from "@/lib/deck-storage";
 import { sendRecapEmail } from "@/lib/email";
 
 export const maxDuration = 300;
@@ -51,6 +52,15 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error || !meeting) throw new Error(`Failed to insert meeting: ${error?.message}`);
+
+    // Archive the PDF to our own storage now that we have the meeting id, so
+    // the deck URL doesn't expire when Gamma's presigned S3 link does (~2 weeks).
+    if (exportUrl) {
+      const archivedUrl = await archiveGammaPdf(exportUrl, meeting.id);
+      if (archivedUrl !== exportUrl) {
+        await supabase.from("meetings").update({ export_url: archivedUrl }).eq("id", meeting.id);
+      }
+    }
 
     // Link to user + all attendees
     const emails = [...new Set([...(await getUserEmail(uid)), ...attendees])].filter(Boolean);

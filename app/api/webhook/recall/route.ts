@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { getBotData, getBotMetadata, buildPromptFromRecallTranscript, inferTitleFromSegments, generateMeetingBrief, transcriptToText } from "@/lib/recall";
 import { generateGammaPage } from "@/lib/gamma";
+import { archiveGammaPdf } from "@/lib/deck-storage";
 import { sendRecapEmail } from "@/lib/email";
 import * as Sentry from "@sentry/nextjs";
 
@@ -255,10 +256,14 @@ async function processMeeting(
     const gammaInput = gammaBrief || buildPromptFromRecallTranscript(title, meeting.start_time, participantNames, segments);
     const { gammaUrl, exportUrl, previewImage } = await generateGammaPage(title, gammaInput, numCards);
 
+    // Archive the PDF to our own storage so the URL never expires.
+    // Gamma's exportUrl is a presigned S3 link valid for only ~2 weeks.
+    const archivedUrl = exportUrl ? await archiveGammaPdf(exportUrl, meeting.id) : null;
+
     // Critical update — must succeed
     const { error: updateErr } = await supabase
       .from("meetings")
-      .update({ gamma_url: gammaUrl, export_url: exportUrl, preview_image: previewImage })
+      .update({ gamma_url: gammaUrl, export_url: archivedUrl, preview_image: previewImage })
       .eq("id", meeting.id);
     if (updateErr) {
       console.error("Critical DB update failed:", updateErr);

@@ -14,6 +14,7 @@ export function DeckViewer({ exportUrl }: { exportUrl: string }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [containerWidth, setContainerWidth] = useState<number>(0);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [expired, setExpired] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   // Suppresses observer updates while a programmatic scroll is in flight,
@@ -23,6 +24,20 @@ export function DeckViewer({ exportUrl }: { exportUrl: string }) {
 
   // Route the PDF through our own origin so PDF.js can fetch without CORS issues
   const fileUrl = `/api/deck-proxy?url=${encodeURIComponent(exportUrl)}`;
+
+  // Gamma's presigned S3 export URLs expire after a few weeks. Pre-check with a
+  // HEAD so we can show a clean "expired" message instead of letting the embed
+  // fallback render S3's raw AccessDenied XML.
+  useEffect(() => {
+    let cancelled = false;
+    fetch(fileUrl, { method: "HEAD" })
+      .then((res) => {
+        if (cancelled) return;
+        if (res.status === 410) setExpired(true);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [fileUrl]);
 
   // Track container width to render PDF pages at the right size
   useEffect(() => {
@@ -65,13 +80,19 @@ export function DeckViewer({ exportUrl }: { exportUrl: string }) {
     setNumPages(numPages);
   }, []);
 
+  // Early-returns MUST come AFTER all hooks above — returning above them
+  // violates Rules of Hooks ("Rendered fewer hooks than expected").
+
+  if (expired) {
+    return <DeckExpired />;
+  }
+
   // Fallback: if PDF.js fails to load, use the native PDF embed so users still
-  // see the deck. Must come AFTER all hooks above — early-returning above the
-  // hooks violates Rules of Hooks ("Rendered fewer hooks than expected").
+  // see the deck. Embed via the proxy so S3 errors don't leak into the UI.
   if (loadFailed) {
     return (
       <embed
-        src={`${exportUrl}#toolbar=0&navpanes=0&scrollbar=0&statusbar=0`}
+        src={`${fileUrl}#toolbar=0&navpanes=0&scrollbar=0&statusbar=0`}
         type="application/pdf"
         className="w-full rounded-xl"
         style={{ height: "min(calc(100vh - 120px), 80vw)" }}
@@ -171,6 +192,27 @@ function DeckError() {
   return (
     <div className="flex items-center justify-center py-20">
       <p className="text-sm text-zinc-500">Couldn't load deck preview.</p>
+    </div>
+  );
+}
+
+function DeckExpired() {
+  return (
+    <div
+      className="flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-900 p-6"
+      style={{ height: "min(calc(100vh - 120px), 80vw)" }}
+    >
+      <div className="max-w-md text-center space-y-3">
+        <div className="mx-auto w-12 h-12 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-2xl">
+          ⌛
+        </div>
+        <h3 className="text-base font-semibold text-zinc-900 dark:text-white">
+          Deck preview expired
+        </h3>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          Gamma&apos;s PDF export link has expired. Use <span className="font-medium text-zinc-700 dark:text-zinc-300">Actions → Regenerate deck</span> to rebuild it.
+        </p>
+      </div>
     </div>
   );
 }

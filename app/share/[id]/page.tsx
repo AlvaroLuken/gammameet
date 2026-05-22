@@ -69,7 +69,7 @@ export default async function SharePage({ params }: { params: Promise<{ id: stri
           {meeting.export_url ? (
             <>
               <embed
-                src={`${meeting.export_url}#toolbar=0&navpanes=0&scrollbar=0&statusbar=0`}
+                src={`/api/deck-proxy?url=${encodeURIComponent(meeting.export_url)}#toolbar=0&navpanes=0&scrollbar=0&statusbar=0`}
                 type="application/pdf"
                 className="hidden md:block w-full rounded-xl"
                 style={{ height: "calc(100vh - 120px)" }}

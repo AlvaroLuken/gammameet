@@ -19,6 +19,7 @@ export function ActionsMenu({ id, gammaUrl, exportUrl, title, hasRecording }: Pr
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
   const [downloadingAudio, setDownloadingAudio] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
   const [regenerating, setRegenerating] = useState(false);
@@ -109,11 +110,20 @@ export function ActionsMenu({ id, gammaUrl, exportUrl, title, hasRecording }: Pr
   const handleDownload = async (e: React.MouseEvent) => {
     e.preventDefault();
     if (!exportUrl || downloading) return;
+    setDownloadError(null);
     setDownloading(true);
     try {
       // Fetch through our proxy so the PDF is same-origin → browser respects
       // the `download` attribute instead of navigating the page to the PDF.
       const res = await fetch(`/api/deck-proxy?url=${encodeURIComponent(exportUrl)}`);
+      if (res.status === 410) {
+        setDownloadError("Deck export expired. Regenerate the deck to download a fresh PDF.");
+        return;
+      }
+      if (!res.ok) {
+        setDownloadError("Download failed. Please try again.");
+        return;
+      }
       const blob = await res.blob();
       const objectUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -124,11 +134,12 @@ export function ActionsMenu({ id, gammaUrl, exportUrl, title, hasRecording }: Pr
       a.remove();
       // Give the browser a tick to start the download, then revoke
       setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      setOpen(false);
     } catch (err) {
       console.error("Download failed:", err);
+      setDownloadError("Download failed. Please try again.");
     } finally {
       setDownloading(false);
-      setOpen(false);
     }
   };
 
@@ -161,14 +172,19 @@ export function ActionsMenu({ id, gammaUrl, exportUrl, title, hasRecording }: Pr
             </a>
           )}
           {exportUrl && (
-            <button
-              onClick={handleDownload}
-              disabled={downloading}
-              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-t border-zinc-100 dark:border-zinc-800 cursor-pointer disabled:opacity-50"
-            >
-              <span>↓</span>
-              {downloading ? "Downloading…" : "Download PDF"}
-            </button>
+            <>
+              <button
+                onClick={handleDownload}
+                disabled={downloading}
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-t border-zinc-100 dark:border-zinc-800 cursor-pointer disabled:opacity-50"
+              >
+                <span>↓</span>
+                {downloading ? "Downloading…" : "Download PDF"}
+              </button>
+              {downloadError && (
+                <p className="px-4 pb-2 text-xs text-zinc-500 dark:text-zinc-400 border-t border-zinc-100 dark:border-zinc-800">{downloadError}</p>
+              )}
+            </>
           )}
           {hasRecording && (
             <>

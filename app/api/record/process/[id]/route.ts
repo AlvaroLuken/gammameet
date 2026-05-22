@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { transcribeAudioUrl } from "@/lib/deepgram";
 import { generateMeetingBrief, buildPromptFromRecallTranscript, transcriptToText } from "@/lib/recall";
 import { generateGammaPage } from "@/lib/gamma";
+import { archiveGammaPdf } from "@/lib/deck-storage";
 import { sendRecapEmail } from "@/lib/email";
 import * as Sentry from "@sentry/nextjs";
 
@@ -111,11 +112,14 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     const gammaInput = brief.gammaBrief || buildPromptFromRecallTranscript(title, meeting.start_time, participantNames, segments);
     const { gammaUrl, exportUrl, previewImage } = await generateGammaPage(title, gammaInput, brief.numCards);
 
+    // Archive the PDF to our own storage so the deck URL never expires.
+    const archivedUrl = exportUrl ? await archiveGammaPdf(exportUrl, id) : null;
+
     const { error: critErr } = await supabase
       .from("meetings")
       .update({
         gamma_url: gammaUrl,
-        export_url: exportUrl,
+        export_url: archivedUrl,
         preview_image: previewImage,
         bot_status: "ended",
         end_time: new Date().toISOString(),

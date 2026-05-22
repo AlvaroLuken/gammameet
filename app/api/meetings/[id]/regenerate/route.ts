@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { getBotData, buildPromptFromRecallTranscript, inferTitleFromSegments, findBotsForMeeting, generateMeetingBrief, verifyBotForMeeting, type BotData } from "@/lib/recall";
 import { generateGammaPage } from "@/lib/gamma";
+import { archiveGammaPdf } from "@/lib/deck-storage";
 
 export const maxDuration = 300;
 
@@ -92,11 +93,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const gammaInput = brief.gammaBrief || buildPromptFromRecallTranscript(title, meeting.start_time, participantNames, segments);
     const { gammaUrl, exportUrl, previewImage } = await generateGammaPage(title, gammaInput, brief.numCards);
 
+    // Archive the PDF so the deck URL is permanent (Gamma's presigned link expires).
+    const archivedUrl = exportUrl ? await archiveGammaPdf(exportUrl, id) : null;
+
     await supabase
       .from("meetings")
       .update({
         gamma_url: gammaUrl,
-        export_url: exportUrl,
+        export_url: archivedUrl,
         preview_image: previewImage,
         transcript_error: false,
         failure_reason: null,
@@ -116,7 +120,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       );
     }
 
-    return NextResponse.json({ ok: true, gammaUrl, exportUrl, previewImage });
+    return NextResponse.json({ ok: true, gammaUrl, exportUrl: archivedUrl, previewImage });
   } catch (err) {
     console.error("Regenerate failed:", err);
     return NextResponse.json({ error: "Failed to regenerate deck. Please try again later." }, { status: 500 });
