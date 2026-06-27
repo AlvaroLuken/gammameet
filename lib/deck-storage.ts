@@ -7,9 +7,18 @@ const DECKS_BUCKET = "decks";
 let bucketEnsured = false;
 async function ensureBucket() {
   if (bucketEnsured) return;
-  const { data: buckets } = await supabase.storage.listBuckets();
+  const { data: buckets, error: listErr } = await supabase.storage.listBuckets();
+  if (listErr) {
+    // Don't cache a failed check — let the next call retry.
+    throw new Error(`listBuckets failed: ${listErr.message}`);
+  }
   if (!buckets?.some((b) => b.name === DECKS_BUCKET)) {
-    await supabase.storage.createBucket(DECKS_BUCKET, { public: true });
+    const { error: createErr } = await supabase.storage.createBucket(DECKS_BUCKET, { public: true });
+    // A concurrent invocation may have created it between our list and create —
+    // treat "already exists" as success, surface anything else.
+    if (createErr && !/exist/i.test(createErr.message)) {
+      throw new Error(`createBucket failed: ${createErr.message}`);
+    }
   }
   bucketEnsured = true;
 }

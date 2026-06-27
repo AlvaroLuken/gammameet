@@ -40,14 +40,22 @@ export async function HEAD(req: NextRequest) {
   const target = parseTarget(req);
   if (target instanceof NextResponse) return target;
 
+  // Gamma's presigned CDN returns 502 to HTTP HEAD (it only honors GET on the
+  // presigned object), so a real HEAD can't distinguish "expired" from "valid".
+  // Use a 1-byte ranged GET instead: an expired link still returns 403, a live
+  // one returns 200/206. This is what powers the viewer's expiry pre-check.
   const upstream = await fetch(target.toString(), {
-    method: "HEAD",
-    headers: { "User-Agent": "GammaMeet/1.0" },
+    method: "GET",
+    headers: { "User-Agent": "GammaMeet/1.0", Range: "bytes=0-0" },
   });
+  // Drain the (tiny) body so the connection can be reused / closed cleanly.
+  await upstream.arrayBuffer().catch(() => {});
   if (upstream.status === 403 || upstream.status === 404) {
     return new NextResponse(null, { status: 410 });
   }
-  if (!upstream.ok) return new NextResponse(null, { status: 502 });
+  if (!upstream.ok && upstream.status !== 206) {
+    return new NextResponse(null, { status: 502 });
+  }
   return new NextResponse(null, { status: 200 });
 }
 
