@@ -12,7 +12,9 @@ import {
 import { generateGammaPage } from "@/lib/gamma";
 import { archiveGammaPdf } from "@/lib/deck-storage";
 
-export const maxDuration = 800;
+// Hobby plan caps serverless maxDuration at 300s. Batch runs would blow this,
+// so the driver calls this route once per meeting via ?only=<id>.
+export const maxDuration = 300;
 
 // TEMPORARY one-off backfill: regenerate decks for meetings whose export_url is
 // still a perishable Gamma presigned URL, archiving the fresh PDF to our own
