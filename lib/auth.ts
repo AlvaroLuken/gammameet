@@ -37,6 +37,25 @@ async function refreshAccessToken(refreshToken: string) {
   };
 }
 
+/**
+ * Revoke GammaMeet's Google OAuth grant for a user. Revoking the refresh token
+ * invalidates the ENTIRE grant — every scope the user consented to — so
+ * GammaMeet loses all access to their Google account until they sign in and
+ * re-consent. Best-effort: Google returns 200 on success and 400 for an
+ * already-invalid token; either way the grant is gone, so we never throw.
+ */
+export async function revokeGoogleGrant(token: string): Promise<void> {
+  try {
+    await fetch("https://oauth2.googleapis.com/revoke", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ token }),
+    });
+  } catch (err) {
+    console.error("Google grant revoke failed:", err);
+  }
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Google({
