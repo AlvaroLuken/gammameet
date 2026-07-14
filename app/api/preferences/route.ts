@@ -50,9 +50,17 @@ export async function PUT(req: NextRequest) {
     shareMode: normalizeShareMode(body.shareMode),
   };
 
+  // Merge into any existing prefs so we preserve keys this endpoint doesn't own
+  // (e.g. notetakerEnabled, managed by /api/notetaker).
+  const { data: existing } = await supabase
+    .from("users")
+    .select("dashboard_prefs")
+    .eq("email", session.user.email)
+    .single();
+
   await supabase
     .from("users")
-    .update({ dashboard_prefs: prefs })
+    .update({ dashboard_prefs: { ...(existing?.dashboard_prefs ?? {}), ...prefs } })
     .eq("email", session.user.email);
 
   return NextResponse.json(prefs);
