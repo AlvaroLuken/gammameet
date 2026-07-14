@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth, revokeGoogleGrant } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
-import { refreshGoogleToken, RefreshTokenInvalidError } from "@/lib/sync";
+import { refreshGoogleToken, RefreshTokenInvalidError, cancelUserSoloMeetingBots } from "@/lib/sync";
 import { stopCalendarWatch } from "@/lib/calendar";
-import { deleteBot } from "@/lib/recall";
 
 /**
  * Disconnect the Google Calendar integration for the current user:
@@ -50,7 +49,7 @@ export async function POST() {
     }
 
     // Cancel scheduled bots on the user's solo meetings before we lose access.
-    await cancelSoloMeetingBots(email);
+    await cancelUserSoloMeetingBots(email);
 
     // Revoke the OAuth grant at Google — removes GammaMeet's access to the
     // user's Google account and every permission they granted.
@@ -71,59 +70,4 @@ export async function POST() {
     .eq("email", email);
 
   return NextResponse.json({ ok: true });
-}
-
-/**
- * Cancel the scheduled Recall bot on every meeting where this user is the only
- * attendee. Meetings shared with other attendees are left alone — their bots
- * belong to those users (mirrors account-deletion scoping). The meeting row is
- * kept and its bot fields nulled, so if the user reconnects before the meeting,
- * sync reschedules a fresh bot.
- */
-async function cancelSoloMeetingBots(email: string) {
-  const { data: invites } = await supabase
-    .from("meeting_invites")
-    .select("meeting_id")
-    .eq("email", email);
-  const meetingIds = [...new Set((invites ?? []).map((r) => r.meeting_id))];
-
-  for (const meetingId of meetingIds) {
-    const { count } = await supabase
-      .from("meeting_invites")
-      .select("id", { count: "exact", head: true })
-      .eq("meeting_id", meetingId);
-    if ((count ?? 0) !== 1) continue; // shared with others — leave the bot
-
-    const { data: meeting } = await supabase
-      .from("meetings")
-      .select("recall_bot_id, bot_status")
-      .eq("id", meetingId)
-      .maybeSingle();
-
-    // Skip bots that have already run or are mid-processing (matches the guard
-    // in /api/meetings/[id]/cancel-bot).
-    if (
-      !meeting?.recall_bot_id ||
-      meeting.bot_status === "ended" ||
-      meeting.bot_status === "processing"
-    ) {
-      continue;
-    }
-
-    try {
-      await deleteBot(meeting.recall_bot_id);
-    } catch (err) {
-      // Best-effort: a failed cancel must not block the disconnect, but log it
-      // so a stray bot is visible in triage.
-      console.error(
-        `Disconnect: failed to cancel Recall bot ${meeting.recall_bot_id} for meeting ${meetingId}:`,
-        err
-      );
-    }
-
-    await supabase
-      .from("meetings")
-      .update({ recall_bot_id: null, bot_status: null })
-      .eq("id", meetingId);
-  }
 }

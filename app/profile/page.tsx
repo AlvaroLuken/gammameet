@@ -7,6 +7,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { supabase } from "@/lib/supabase";
 import { DeleteAccountButton } from "@/components/DeleteAccountButton";
 import { DisconnectGoogleButton } from "@/components/DisconnectGoogleButton";
+import { NotetakerToggle } from "@/components/NotetakerToggle";
 import { DashboardPreferences } from "@/components/DashboardPreferences";
 
 export const metadata: Metadata = { title: "Profile — GammaMeet" };
@@ -47,6 +48,8 @@ export default async function ProfilePage() {
     .single();
 
   const googleConnected = !!userData?.google_refresh_token;
+  const notetakerEnabled =
+    (userData?.dashboard_prefs as { notetakerEnabled?: boolean } | null)?.notetakerEnabled !== false;
 
   const dashboardPrefs = {
     showUpcoming: true,
@@ -190,6 +193,12 @@ export default async function ProfilePage() {
               </form>
             </div>
           )}
+        </div>
+
+        {/* Meeting notetaker master switch */}
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 space-y-3">
+          <h2 className="font-semibold text-lg">Meeting notetaker</h2>
+          <NotetakerToggle initialEnabled={notetakerEnabled} />
         </div>
 
         <DashboardPreferences initial={dashboardPrefs} />
