@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { auth, signOut } from "@/lib/auth";
+import { auth, signIn, signOut } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { supabase } from "@/lib/supabase";
 import { DeleteAccountButton } from "@/components/DeleteAccountButton";
+import { DisconnectGoogleButton } from "@/components/DisconnectGoogleButton";
 import { DashboardPreferences } from "@/components/DashboardPreferences";
 
 export const metadata: Metadata = { title: "Profile — GammaMeet" };
@@ -13,6 +14,11 @@ export const metadata: Metadata = { title: "Profile — GammaMeet" };
 async function handleSignOut() {
   "use server";
   await signOut({ redirectTo: "/" });
+}
+
+async function handleReconnect() {
+  "use server";
+  await signIn("google", { redirectTo: "/profile" });
 }
 
 export default async function ProfilePage() {
@@ -36,9 +42,11 @@ export default async function ProfilePage() {
 
   const { data: userData } = await supabase
     .from("users")
-    .select("dashboard_prefs")
+    .select("dashboard_prefs, google_refresh_token")
     .eq("email", user.email!)
     .single();
+
+  const googleConnected = !!userData?.google_refresh_token;
 
   const dashboardPrefs = {
     showUpcoming: true,
@@ -146,12 +154,42 @@ export default async function ProfilePage() {
         {/* Google connection */}
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-lg">Google</h2>
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950 px-3 py-1.5 rounded-full border border-green-200 dark:border-green-800">
-              ✓ Connected
-            </span>
+            <h2 className="font-semibold text-lg">Google Calendar</h2>
+            {googleConnected ? (
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950 px-3 py-1.5 rounded-full border border-green-200 dark:border-green-800">
+                ✓ Connected
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-700">
+                Not connected
+              </span>
+            )}
           </div>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">Signed in as {user.email}</p>
+          {googleConnected ? (
+            <div className="pt-1 space-y-2">
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                GammaMeet reads your calendar to schedule the notetaker on meetings with a Google
+                Meet link. Disconnecting revokes that access and any permissions you granted.
+              </p>
+              <DisconnectGoogleButton />
+            </div>
+          ) : (
+            <div className="pt-1 space-y-2">
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                GammaMeet no longer has access to your Google Calendar. Reconnect to resume
+                scheduling the notetaker on your meetings.
+              </p>
+              <form action={handleReconnect}>
+                <button
+                  type="submit"
+                  className="text-sm text-white bg-violet-600 hover:bg-violet-500 font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer"
+                >
+                  Reconnect Google Calendar
+                </button>
+              </form>
+            </div>
+          )}
         </div>
 
         <DashboardPreferences initial={dashboardPrefs} />
