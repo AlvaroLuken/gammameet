@@ -59,8 +59,71 @@ export async function ensureCalendarSubscription(userId: string, accessToken: st
   }
 }
 
+/**
+ * Cancel the scheduled Recall bot ("Jim") on every meeting where `email` is the
+ * only attendee. Meetings shared with other attendees are left alone — their
+ * bots belong to those users. Meeting rows are kept and their bot fields nulled,
+ * so a fresh bot can be rescheduled later if the user re-enables scheduling.
+ * Best-effort per meeting: a failed Recall cancel is logged, not thrown.
+ */
+export async function cancelUserSoloMeetingBots(email: string): Promise<void> {
+  const { data: invites } = await supabase
+    .from("meeting_invites")
+    .select("meeting_id")
+    .eq("email", email);
+  const meetingIds = [...new Set((invites ?? []).map((r) => r.meeting_id))];
+
+  for (const meetingId of meetingIds) {
+    const { count } = await supabase
+      .from("meeting_invites")
+      .select("id", { count: "exact", head: true })
+      .eq("meeting_id", meetingId);
+    if ((count ?? 0) !== 1) continue; // shared with others — leave the bot
+
+    const { data: meeting } = await supabase
+      .from("meetings")
+      .select("recall_bot_id, bot_status")
+      .eq("id", meetingId)
+      .maybeSingle();
+
+    // Skip bots that have already run or are mid-processing (matches the guard
+    // in /api/meetings/[id]/cancel-bot).
+    if (
+      !meeting?.recall_bot_id ||
+      meeting.bot_status === "ended" ||
+      meeting.bot_status === "processing"
+    ) {
+      continue;
+    }
+
+    try {
+      await deleteBot(meeting.recall_bot_id);
+    } catch (err) {
+      console.error(
+        `cancelUserSoloMeetingBots: failed to cancel Recall bot ${meeting.recall_bot_id} for meeting ${meetingId}:`,
+        err
+      );
+    }
+
+    await supabase
+      .from("meetings")
+      .update({ recall_bot_id: null, bot_status: null })
+      .eq("id", meetingId);
+  }
+}
+
 export async function scheduleBotsForUser(userId: string, userEmail: string, accessToken: string) {
   if (!process.env.RECALLAI_API_KEY) return;
+
+  // Respect the user's master notetaker switch. When it's off we neither
+  // subscribe to calendar pushes nor schedule any bots. Absent/true = on.
+  const { data: prefRow } = await supabase
+    .from("users")
+    .select("dashboard_prefs")
+    .eq("id", userId)
+    .maybeSingle();
+  const prefs = prefRow?.dashboard_prefs as { notetakerEnabled?: boolean } | null;
+  if (prefs?.notetakerEnabled === false) return;
 
   // Make sure we're subscribed to real-time calendar push notifications
   // so new/moved events trigger a near-instant sync
